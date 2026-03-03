@@ -6,6 +6,7 @@ import com.pos.dto.response.ShiftResponse;
 import com.pos.entity.Shift;
 import com.pos.entity.User;
 import com.pos.enums.PaymentMethod;
+import com.pos.enums.Role;
 import com.pos.enums.PaymentStatus;
 import com.pos.enums.ShiftStatus;
 import com.pos.exception.BadRequestException;
@@ -49,6 +50,7 @@ class ShiftServiceTest {
         cashier.setId(1L);
         cashier.setUsername("cashier1");
         cashier.setEmail("cashier@example.com");
+        cashier.setRole(Role.CASHIER);
         SecurityContextHolder.getContext().setAuthentication(
                 new TestingAuthenticationToken(cashier, "pw", cashier.getAuthorities())
         );
