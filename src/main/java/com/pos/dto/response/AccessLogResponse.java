@@ -16,6 +16,7 @@ public class AccessLogResponse {
     private String country;
     private String userAgent;
     private String path;
+    private String action;
     private LocalDateTime createdAt;
 
     public static AccessLogResponse from(AccessLog log) {
@@ -27,6 +28,7 @@ public class AccessLogResponse {
                 .country(log.getCountry())
                 .userAgent(log.getUserAgent())
                 .path(log.getPath())
+                .action(log.getAction())
                 .createdAt(log.getCreatedAt())
                 .build();
     }

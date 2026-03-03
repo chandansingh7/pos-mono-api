@@ -51,6 +51,7 @@ public class AccessLogService {
         String ip = resolveClientIp(request);
         String country = resolveCountry(request);
         String userAgent = Optional.ofNullable(request.getHeader("User-Agent")).orElse("");
+        String action = resolveAction(request.getMethod(), path);
 
         AccessLog logEntry = AccessLog.builder()
                 .username(username)
@@ -58,6 +59,7 @@ public class AccessLogService {
                 .country(country)
                 .userAgent(userAgent)
                 .path(path)
+                .action(action)
                 .build();
 
         accessLogRepository.save(logEntry);
@@ -131,6 +133,67 @@ public class AccessLogService {
         if (appEngine != null && !appEngine.isBlank() && !"ZZ".equalsIgnoreCase(appEngine)) return appEngine;
 
         return null;
+    }
+
+    private String resolveAction(String method, String path) {
+        if (method == null || path == null) {
+            return "";
+        }
+        method = method.toUpperCase(Locale.ROOT);
+
+        // Orders
+        if (method.equals("POST") && path.equals("/api/orders")) {
+            return "Create order";
+        }
+        if (method.equals("PUT") && path.matches("^/api/orders/.+/cancel$")) {
+            return "Cancel order";
+        }
+
+        // Products
+        if (method.equals("POST") && path.equals("/api/products")) {
+            return "Create product";
+        }
+        if (method.equals("PUT") && path.matches("^/api/products/\\d+$")) {
+            return "Update product";
+        }
+
+        // Categories
+        if (path.startsWith("/api/categories")) {
+            if (method.equals("POST")) return "Create category";
+            if (method.equals("PUT")) return "Update category";
+            if (method.equals("DELETE")) return "Delete category";
+        }
+
+        // Customers
+        if (path.startsWith("/api/customers")) {
+            if (method.equals("POST")) return "Create/Update customer";
+        }
+
+        // Shifts
+        if (method.equals("POST") && path.equals("/api/shifts/open")) {
+            return "Open shift";
+        }
+        if (method.equals("POST") && path.equals("/api/shifts/close")) {
+            return "Close shift";
+        }
+
+        // Auth
+        if (method.equals("POST") && path.equals("/api/auth/login")) {
+            return "Login";
+        }
+        if (method.equals("POST") && path.equals("/api/auth/register")) {
+            return "Register user";
+        }
+
+        // Company / settings
+        if (path.startsWith("/api/company")) {
+            if (method.equals("PUT")) return "Update company settings";
+            if (method.equals("POST") && path.contains("/logo")) return "Upload company logo";
+            if (method.equals("POST") && path.contains("/favicon")) return "Upload company favicon";
+        }
+
+        // Default: fallback to METHOD path
+        return method + " " + path;
     }
 }
 

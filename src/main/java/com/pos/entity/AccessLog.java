@@ -33,6 +33,9 @@ public class AccessLog {
     @Column(length = 256)
     private String path;
 
+    @Column(length = 128)
+    private String action;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
