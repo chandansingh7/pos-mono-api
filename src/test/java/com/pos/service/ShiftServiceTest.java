@@ -50,9 +50,8 @@ class ShiftServiceTest {
         cashier.setUsername("cashier1");
         cashier.setEmail("cashier@example.com");
         SecurityContextHolder.getContext().setAuthentication(
-                new TestingAuthenticationToken(cashier.getUsername(), "pw")
+                new TestingAuthenticationToken(cashier, "pw", cashier.getAuthorities())
         );
-        when(userRepository.findByUsername(cashier.getUsername())).thenReturn(Optional.of(cashier));
     }
 
     @Test

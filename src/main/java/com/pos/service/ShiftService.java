@@ -119,10 +119,17 @@ public class ShiftService {
 
     private User currentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || auth.getName() == null) {
+        if (auth == null || auth.getPrincipal() == null) {
             throw new BadRequestException(ErrorCode.AU004, "No authenticated user");
         }
-        return userRepository.findByUsername(auth.getName())
+        if (auth.getPrincipal() instanceof User user) {
+            return user;
+        }
+        String username = auth.getName();
+        if (username == null) {
+            throw new BadRequestException(ErrorCode.AU004, "No authenticated user");
+        }
+        return userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.US001));
     }
 }
