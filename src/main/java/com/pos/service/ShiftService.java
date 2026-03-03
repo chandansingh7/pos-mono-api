@@ -103,7 +103,7 @@ public class ShiftService {
         if (auth == null || auth.getName() == null) {
             throw new BadRequestException(ErrorCode.AU004, "No authenticated user");
         }
-        return userRepository.findByEmail(auth.getName())
+        return userRepository.findByUsername(auth.getName())
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.US001));
     }
 }
