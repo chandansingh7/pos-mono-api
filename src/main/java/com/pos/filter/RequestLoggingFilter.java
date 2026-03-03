@@ -1,5 +1,6 @@
 package com.pos.filter;
 
+import com.pos.service.AccessLogService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,6 +32,12 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     private static final String REQUEST_ID = "requestId";
     private static final String USERNAME    = "user";
 
+    private final AccessLogService accessLogService;
+
+    public RequestLoggingFilter(AccessLogService accessLogService) {
+        this.accessLogService = accessLogService;
+    }
+
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest  request,
@@ -47,6 +54,13 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             log.debug(">>> {} {}", request.getMethod(), request.getRequestURI());
             chain.doFilter(request, response);
         } finally {
+            // Persist access log after security filters have set the principal
+            try {
+                accessLogService.log(request);
+            } catch (Exception e) {
+                log.warn("Failed to persist access log: {}", e.getMessage());
+            }
+
             // Re-resolve after filter chain runs (JWT filter may have set the principal by now)
             MDC.put(USERNAME, resolveUsername());
 
