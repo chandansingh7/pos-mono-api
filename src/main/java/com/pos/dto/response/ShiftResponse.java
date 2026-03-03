@@ -27,7 +27,7 @@ public class ShiftResponse {
         if (shift == null) return null;
         return ShiftResponse.builder()
                 .id(shift.getId())
-                .cashierUsername(shift.getCashier() != null ? shift.getCashier().getEmail() : null)
+                .cashierUsername(shift.getCashier() != null ? shift.getCashier().getUsername() : null)
                 .openingFloat(shift.getOpeningFloat())
                 .cashSales(shift.getCashSales())
                 .expectedCash(shift.getExpectedCash())

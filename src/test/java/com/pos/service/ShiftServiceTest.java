@@ -47,11 +47,12 @@ class ShiftServiceTest {
         MockitoAnnotations.openMocks(this);
         cashier = new User();
         cashier.setId(1L);
+        cashier.setUsername("cashier1");
         cashier.setEmail("cashier@example.com");
         SecurityContextHolder.getContext().setAuthentication(
-                new TestingAuthenticationToken(cashier.getEmail(), "pw")
+                new TestingAuthenticationToken(cashier.getUsername(), "pw")
         );
-        when(userRepository.findByEmail(cashier.getEmail())).thenReturn(Optional.of(cashier));
+        when(userRepository.findByUsername(cashier.getUsername())).thenReturn(Optional.of(cashier));
     }
 
     @Test

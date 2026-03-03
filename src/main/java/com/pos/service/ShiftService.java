@@ -2,6 +2,7 @@ package com.pos.service;
 
 import com.pos.dto.request.CloseShiftRequest;
 import com.pos.dto.request.OpenShiftRequest;
+import com.pos.dto.response.ShiftListResponse;
 import com.pos.dto.response.ShiftResponse;
 import com.pos.entity.Shift;
 import com.pos.entity.User;
@@ -16,6 +17,8 @@ import com.pos.repository.ShiftRepository;
 import com.pos.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -23,6 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -96,6 +101,20 @@ public class ShiftService {
         log.info("Shift closed — id: {}, cashier: {}, expected: {}, counted: {}, diff: {}",
                 shift.getId(), cashier.getEmail(), expected, counted, difference);
         return ShiftResponse.from(shift);
+    }
+
+    @Transactional(readOnly = true)
+    public ShiftListResponse listForAdmin(int page, int size) {
+        long openCount = shiftRepository.countByStatus(ShiftStatus.OPEN);
+        Pageable pageable = PageRequest.of(page, size);
+        List<Shift> list = shiftRepository.findAllByOrderByOpenedAtDesc(pageable);
+        List<ShiftResponse> responses = list.stream()
+                .map(ShiftResponse::from)
+                .collect(Collectors.toList());
+        return ShiftListResponse.builder()
+                .openCount(openCount)
+                .shifts(responses)
+                .build();
     }
 
     private User currentUser() {
