@@ -27,4 +27,10 @@ public class CompanyRequest {
 
     /** Locale for formatting (e.g. en-US, hi-IN) */
     private String locale;
+
+    /**
+     * Enable quick shift open/close controls on the POS / Cashier screen.
+     * When false or null, cashiers must use the Shifts page to manage shifts.
+     */
+    private Boolean posQuickShiftControls;
 }

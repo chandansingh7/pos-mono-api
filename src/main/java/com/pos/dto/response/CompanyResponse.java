@@ -26,6 +26,9 @@ public class CompanyResponse {
     private String locale;
     private LocalDateTime updatedAt;
 
+    /** Whether quick shift open/close controls are enabled on the POS screen. */
+    private Boolean posQuickShiftControls;
+
     public static CompanyResponse from(Company c) {
         if (c == null) return null;
         return CompanyResponse.builder()
@@ -43,6 +46,7 @@ public class CompanyResponse {
                 .receiptHeaderText(c.getReceiptHeaderText())
                 .displayCurrency(c.getDisplayCurrency())
                 .locale(c.getLocale())
+                .posQuickShiftControls(c.getPosQuickShiftControls())
                 .updatedAt(c.getUpdatedAt())
                 .build();
     }

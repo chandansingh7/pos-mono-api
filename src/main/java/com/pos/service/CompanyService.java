@@ -45,6 +45,7 @@ public class CompanyService {
         company.setReceiptPaperSize(request.getReceiptPaperSize() != null ? request.getReceiptPaperSize() : "80mm");
         company.setDisplayCurrency(request.getDisplayCurrency() != null && !request.getDisplayCurrency().isBlank() ? request.getDisplayCurrency().trim() : "USD");
         company.setLocale(request.getLocale() != null && !request.getLocale().isBlank() ? request.getLocale().trim() : "en-US");
+        company.setPosQuickShiftControls(request.getPosQuickShiftControls() != null ? request.getPosQuickShiftControls() : Boolean.FALSE);
         company.setUpdatedBy(updatedBy);
         company = companyRepository.save(company);
         log.info("Company settings updated by {}", updatedBy);

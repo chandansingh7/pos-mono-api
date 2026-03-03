@@ -13,6 +13,7 @@ package com.pos.exception;
  *   CM – Customer
  *   OR – Order
  *   IN – Inventory
+ *   SH – Shift / cashier session
  *   VA – Validation
  *   SV – Server / unexpected
  */
@@ -57,6 +58,10 @@ public enum ErrorCode {
 
     // ── Inventory ─────────────────────────────────────────────────────────────
     IN001("IN001", "Inventory record not found for this product"),
+
+    // ── Shifts / cashier sessions ─────────────────────────────────────────────
+    SH001("SH001", "Cash drawer difference exceeds allowed tolerance"),
+    SH002("SH002", "Shift cannot be closed yet (minimum open time not reached)"),
 
     // ── Label ─────────────────────────────────────────────────────────────────
     LB001("LB001", "Label not found"),

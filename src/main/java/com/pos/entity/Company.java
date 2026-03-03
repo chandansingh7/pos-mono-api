@@ -57,6 +57,13 @@ public class Company {
     @Column(length = 10)
     private String locale;
 
+    /**
+     * When true, show quick shift open/close controls directly on the POS / Cashier
+     * screen for cashiers (in addition to the Shifts page).
+     */
+    @Column(name = "pos_quick_shift_controls")
+    private Boolean posQuickShiftControls;
+
     private LocalDateTime updatedAt;
 
     private String updatedBy;

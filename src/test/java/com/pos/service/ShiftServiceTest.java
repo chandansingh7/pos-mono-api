@@ -1,5 +1,6 @@
 package com.pos.service;
 
+import com.pos.config.ShiftConfig;
 import com.pos.dto.request.CloseShiftRequest;
 import com.pos.dto.request.OpenShiftRequest;
 import com.pos.dto.response.ShiftResponse;
@@ -37,6 +38,8 @@ class ShiftServiceTest {
     private PaymentRepository paymentRepository;
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private ShiftConfig shiftConfig;
 
     @InjectMocks
     private ShiftService shiftService;
@@ -54,6 +57,9 @@ class ShiftServiceTest {
         SecurityContextHolder.getContext().setAuthentication(
                 new TestingAuthenticationToken(cashier, "pw", cashier.getAuthorities())
         );
+
+        when(shiftConfig.getMaxDifferenceAbsolute()).thenReturn(BigDecimal.ZERO);
+        when(shiftConfig.getMinOpenMinutes()).thenReturn(0L);
     }
 
     @Test
@@ -114,6 +120,54 @@ class ShiftServiceTest {
         assertEquals(new BigDecimal("350.00"), resp.getExpectedCash());
         assertEquals(new BigDecimal("10.00"), resp.getDifference());
         assertEquals(ShiftStatus.CLOSED, resp.getStatus());
+    }
+
+    @Test
+    void close_shouldRejectWhenDifferenceExceedsTolerance() {
+        Shift shift = new Shift();
+        shift.setId(21L);
+        shift.setCashier(cashier);
+        shift.setOpeningFloat(new BigDecimal("100.00"));
+        shift.setOpenedAt(LocalDateTime.now().minusHours(2));
+        shift.setStatus(ShiftStatus.OPEN);
+
+        when(shiftRepository.findByCashierAndStatus(any(), eq(ShiftStatus.OPEN)))
+                .thenReturn(Optional.of(shift));
+        when(paymentRepository.sumByMethodAndStatusAndCashierAndCreatedAtBetween(
+                eq(PaymentMethod.CASH), eq(PaymentStatus.COMPLETED), eq(cashier), any(), any()))
+                .thenReturn(new BigDecimal("250.00"));
+        when(shiftConfig.getMaxDifferenceAbsolute()).thenReturn(new BigDecimal("5.00"));
+
+        CloseShiftRequest req = new CloseShiftRequest();
+        // expected = 350 → diff = 20 > 5 tolerance
+        req.setCountedCash(new BigDecimal("370.00"));
+
+        assertThrows(BadRequestException.class, () -> shiftService.close(req));
+        verify(shiftRepository, never()).save(any(Shift.class));
+    }
+
+    @Test
+    void close_shouldRejectWhenOpenTimeBelowMinimum() {
+        Shift shift = new Shift();
+        shift.setId(22L);
+        shift.setCashier(cashier);
+        shift.setOpeningFloat(new BigDecimal("100.00"));
+        // Opened 5 minutes ago
+        shift.setOpenedAt(LocalDateTime.now().minusMinutes(5));
+        shift.setStatus(ShiftStatus.OPEN);
+
+        when(shiftRepository.findByCashierAndStatus(any(), eq(ShiftStatus.OPEN)))
+                .thenReturn(Optional.of(shift));
+        when(paymentRepository.sumByMethodAndStatusAndCashierAndCreatedAtBetween(
+                eq(PaymentMethod.CASH), eq(PaymentStatus.COMPLETED), eq(cashier), any(), any()))
+                .thenReturn(new BigDecimal("0.00"));
+        when(shiftConfig.getMinOpenMinutes()).thenReturn(30L);
+
+        CloseShiftRequest req = new CloseShiftRequest();
+        req.setCountedCash(new BigDecimal("100.00"));
+
+        assertThrows(BadRequestException.class, () -> shiftService.close(req));
+        verify(shiftRepository, never()).save(any(Shift.class));
     }
 }
 

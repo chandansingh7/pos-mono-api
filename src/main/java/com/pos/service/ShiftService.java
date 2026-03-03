@@ -1,5 +1,6 @@
 package com.pos.service;
 
+import com.pos.config.ShiftConfig;
 import com.pos.dto.request.CloseShiftRequest;
 import com.pos.dto.request.OpenShiftRequest;
 import com.pos.dto.response.ShiftListResponse;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,6 +39,7 @@ public class ShiftService {
     private final ShiftRepository shiftRepository;
     private final PaymentRepository paymentRepository;
     private final UserRepository userRepository;
+    private final ShiftConfig shiftConfig;
 
     @Transactional
     public ShiftResponse open(OpenShiftRequest request) {
@@ -89,6 +92,27 @@ public class ShiftService {
         BigDecimal expected = shift.getOpeningFloat().add(cashSales);
         BigDecimal counted = request.getCountedCash();
         BigDecimal difference = counted.subtract(expected);
+
+        // ── Configurable business rules before closing ─────────────────────────
+        BigDecimal maxDiff = shiftConfig.getMaxDifferenceAbsolute();
+        if (maxDiff != null && maxDiff.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal abs = difference.abs();
+            if (abs.compareTo(maxDiff) > 0) {
+                log.warn("[SH001] Shift close rejected — diff: {}, max allowed: {}", abs, maxDiff);
+                throw new BadRequestException(ErrorCode.SH001,
+                        "Cash drawer difference " + abs + " exceeds allowed tolerance " + maxDiff);
+            }
+        }
+
+        long minMinutes = shiftConfig.getMinOpenMinutes();
+        if (minMinutes > 0 && shift.getOpenedAt() != null) {
+            long openMinutes = Duration.between(shift.getOpenedAt(), now).toMinutes();
+            if (openMinutes < minMinutes) {
+                log.warn("[SH002] Shift close rejected — open for {} min, minimum required: {}", openMinutes, minMinutes);
+                throw new BadRequestException(ErrorCode.SH002,
+                        "Shift has been open for only " + openMinutes + " minutes (minimum " + minMinutes + ").");
+            }
+        }
 
         shift.setCashSales(cashSales);
         shift.setExpectedCash(expected);
