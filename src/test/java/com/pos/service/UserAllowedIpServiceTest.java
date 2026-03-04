@@ -82,7 +82,7 @@ class UserAllowedIpServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         UserBlockedIp blocked = UserBlockedIp.builder().user(user).ipAddress("192.168.1.1").build();
         when(userBlockedIpRepository.findByUserOrderByCreatedAtDesc(user)).thenReturn(List.of(blocked));
-        when(userAllowedIpRepository.findByUserOrderByCreatedAtDesc(user)).thenReturn(List.of());
+        // Allow list is never queried because IP is blocked first
 
         assertFalse(userAllowedIpService.isAllowed(1L, "192.168.1.1"));
     }
