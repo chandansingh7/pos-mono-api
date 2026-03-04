@@ -20,6 +20,11 @@ public class AuthController {
     private final AuthService authService;
     private final AccessLogService accessLogService;
 
+    @GetMapping("/client-ip")
+    public ResponseEntity<ApiResponse<String>> getClientIp(HttpServletRequest httpRequest) {
+        return ResponseEntity.ok(ApiResponse.ok(accessLogService.resolveClientIp(httpRequest)));
+    }
+
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(
             @Valid @RequestBody LoginRequest request,

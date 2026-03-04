@@ -2,13 +2,16 @@ package com.pos.controller;
 
 import com.pos.dto.request.AddAllowedIpRequest;
 import com.pos.dto.response.ApiResponse;
+import com.pos.service.AccessLogService;
 import com.pos.service.UserBlockedIpService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,6 +23,7 @@ import java.util.List;
 public class BlockedIpController {
 
     private final UserBlockedIpService userBlockedIpService;
+    private final AccessLogService accessLogService;
 
     @GetMapping
     @PreAuthorize("hasAuthority('ADMIN')")
@@ -31,9 +35,14 @@ public class BlockedIpController {
     @PostMapping
     @PreAuthorize("hasAuthority('ADMIN')")
     @Operation(summary = "Block an IP for a user")
-    public ResponseEntity<ApiResponse<List<String>>> addBlockedIp(@Valid @RequestBody AddAllowedIpRequest request) {
+    public ResponseEntity<ApiResponse<List<String>>> addBlockedIp(
+            @Valid @RequestBody AddAllowedIpRequest request,
+            Authentication auth,
+            HttpServletRequest httpRequest) {
+        String currentUsername = auth != null ? auth.getName() : null;
+        String clientIp = accessLogService.resolveClientIp(httpRequest);
         return ResponseEntity.ok(ApiResponse.ok("IP added to block list",
-                userBlockedIpService.addBlockedIp(request.getUsername(), request.getIpAddress())));
+                userBlockedIpService.addBlockedIp(request.getUsername(), request.getIpAddress(), currentUsername, clientIp)));
     }
 
     @DeleteMapping

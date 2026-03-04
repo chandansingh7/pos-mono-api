@@ -28,6 +28,7 @@ public enum ErrorCode {
     AU006("AU006", "New password and confirmation do not match"),
     AU007("AU007", "New password must be different from the current password"),
     AU008("AU008", "Access denied: login from this IP is not allowed. Contact an administrator to whitelist your IP."),
+    AU009("AU009", "You cannot block the IP you are currently using. Use another account or IP to block it."),
 
     // ── User management ───────────────────────────────────────────────────────
     US001("US001", "User not found"),

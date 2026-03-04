@@ -54,7 +54,7 @@ public class UserBlockedIpService {
     }
 
     @Transactional
-    public List<String> addBlockedIp(String username, String ipAddress) {
+    public List<String> addBlockedIp(String username, String ipAddress, String currentUsername, String clientIp) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.US001));
         String raw = (ipAddress != null) ? ipAddress.trim() : "";
@@ -62,6 +62,10 @@ public class UserBlockedIpService {
             throw new BadRequestException(ErrorCode.VA001, "IP address is required");
         }
         String ip = normalizeIp(raw);
+        if (username.equals(currentUsername) && ip.equals(normalizeIp(clientIp))) {
+            log.warn("[AU009] User {} attempted to block their own current IP {}", username, ip);
+            throw new BadRequestException(ErrorCode.AU009);
+        }
         if (userBlockedIpRepository.existsByUserAndIpAddress(user, ip)) {
             return userBlockedIpRepository.findByUserOrderByCreatedAtDesc(user).stream()
                     .map(UserBlockedIp::getIpAddress)
