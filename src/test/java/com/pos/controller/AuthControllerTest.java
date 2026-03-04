@@ -15,6 +15,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -38,7 +39,7 @@ class AuthControllerTest {
                 .role(Role.ADMIN)
                 .build();
 
-        when(authService.login(any())).thenReturn(authResponse);
+        when(authService.login(any(), anyString())).thenReturn(authResponse);
 
         LoginRequest request = new LoginRequest();
         request.setUsername("admin");
@@ -56,7 +57,7 @@ class AuthControllerTest {
 
     @Test
     void login_invalidCredentials_returnsUnauthorized() throws Exception {
-        when(authService.login(any())).thenThrow(new BadCredentialsException("Bad credentials"));
+        when(authService.login(any(), anyString())).thenThrow(new BadCredentialsException("Bad credentials"));
 
         LoginRequest request = new LoginRequest();
         request.setUsername("admin");
