@@ -45,5 +45,14 @@ public class ShiftController {
         ShiftResponse shift = shiftService.close(request);
         return ResponseEntity.ok(ApiResponse.ok(shift));
     }
+
+    @PostMapping("/{id}/force-close")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<ApiResponse<ShiftResponse>> forceClose(
+            @PathVariable Long id,
+            @Valid @RequestBody CloseShiftRequest request) {
+        ShiftResponse shift = shiftService.forceClose(id, request);
+        return ResponseEntity.ok(ApiResponse.ok("Shift force-closed", shift));
+    }
 }
 

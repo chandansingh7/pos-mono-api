@@ -32,12 +32,39 @@ public class ShiftConfig {
     @Value("${shift.min-open-minutes:0}")
     private long minOpenMinutes;
 
+    /**
+     * Maximum number of hours a shift is allowed to remain open.
+     * If {@code <= 0}, no maximum duration is enforced.
+     *
+     * Example property: {@code shift.max-open-hours=12}
+     */
+    @Value("${shift.max-open-hours:0}")
+    private long maxOpenHours;
+
+    /**
+     * When true, disallow closing a shift that was opened on a previous
+     * calendar day (local server time). Cashiers must ask an admin to
+     * force-close such stale shifts.
+     *
+     * Example property: {@code shift.require-same-day=true}
+     */
+    @Value("${shift.require-same-day:false}")
+    private boolean requireSameDay;
+
     public BigDecimal getMaxDifferenceAbsolute() {
         return maxDifferenceAbsolute;
     }
 
     public long getMinOpenMinutes() {
         return minOpenMinutes;
+    }
+
+    public long getMaxOpenHours() {
+        return maxOpenHours;
+    }
+
+    public boolean isRequireSameDay() {
+        return requireSameDay;
     }
 }
 

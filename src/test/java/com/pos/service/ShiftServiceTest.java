@@ -60,6 +60,8 @@ class ShiftServiceTest {
 
         when(shiftConfig.getMaxDifferenceAbsolute()).thenReturn(BigDecimal.ZERO);
         when(shiftConfig.getMinOpenMinutes()).thenReturn(0L);
+        when(shiftConfig.getMaxOpenHours()).thenReturn(0L);
+        when(shiftConfig.isRequireSameDay()).thenReturn(false);
     }
 
     @Test
@@ -168,6 +170,83 @@ class ShiftServiceTest {
 
         assertThrows(BadRequestException.class, () -> shiftService.close(req));
         verify(shiftRepository, never()).save(any(Shift.class));
+    }
+
+    @Test
+    void close_shouldRejectWhenOpenTimeExceedsMaxHours() {
+        Shift shift = new Shift();
+        shift.setId(23L);
+        shift.setCashier(cashier);
+        shift.setOpeningFloat(new BigDecimal("100.00"));
+        // Opened 13 hours ago
+        shift.setOpenedAt(LocalDateTime.now().minusHours(13));
+        shift.setStatus(ShiftStatus.OPEN);
+
+        when(shiftRepository.findByCashierAndStatus(any(), eq(ShiftStatus.OPEN)))
+                .thenReturn(Optional.of(shift));
+        when(paymentRepository.sumByMethodAndStatusAndCashierAndCreatedAtBetween(
+                eq(PaymentMethod.CASH), eq(PaymentStatus.COMPLETED), eq(cashier), any(), any()))
+                .thenReturn(new BigDecimal("0.00"));
+        when(shiftConfig.getMaxOpenHours()).thenReturn(12L);
+
+        CloseShiftRequest req = new CloseShiftRequest();
+        req.setCountedCash(new BigDecimal("100.00"));
+
+        assertThrows(BadRequestException.class, () -> shiftService.close(req));
+        verify(shiftRepository, never()).save(any(Shift.class));
+    }
+
+    @Test
+    void close_shouldRejectWhenRequireSameDayAndShiftFromPreviousDay() {
+        Shift shift = new Shift();
+        shift.setId(24L);
+        shift.setCashier(cashier);
+        shift.setOpeningFloat(new BigDecimal("100.00"));
+        // Opened yesterday
+        shift.setOpenedAt(LocalDateTime.now().minusDays(1));
+        shift.setStatus(ShiftStatus.OPEN);
+
+        when(shiftRepository.findByCashierAndStatus(any(), eq(ShiftStatus.OPEN)))
+                .thenReturn(Optional.of(shift));
+        when(paymentRepository.sumByMethodAndStatusAndCashierAndCreatedAtBetween(
+                eq(PaymentMethod.CASH), eq(PaymentStatus.COMPLETED), eq(cashier), any(), any()))
+                .thenReturn(new BigDecimal("0.00"));
+        when(shiftConfig.isRequireSameDay()).thenReturn(true);
+
+        CloseShiftRequest req = new CloseShiftRequest();
+        req.setCountedCash(new BigDecimal("100.00"));
+
+        assertThrows(BadRequestException.class, () -> shiftService.close(req));
+        verify(shiftRepository, never()).save(any(Shift.class));
+    }
+
+    @Test
+    void forceClose_shouldBypassDurationRulesAndComputeDifference() {
+        Shift shift = new Shift();
+        shift.setId(30L);
+        shift.setCashier(cashier);
+        shift.setOpeningFloat(new BigDecimal("100.00"));
+        // Very old shift
+        shift.setOpenedAt(LocalDateTime.now().minusDays(2));
+        shift.setStatus(ShiftStatus.OPEN);
+
+        when(shiftRepository.findById(30L)).thenReturn(Optional.of(shift));
+        when(paymentRepository.sumByMethodAndStatusAndCashierAndCreatedAtBetween(
+                eq(PaymentMethod.CASH), eq(PaymentStatus.COMPLETED), eq(cashier), any(), any()))
+                .thenReturn(new BigDecimal("250.00"));
+        when(shiftRepository.save(any(Shift.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        CloseShiftRequest req = new CloseShiftRequest();
+        req.setCountedCash(new BigDecimal("360.00"));
+
+        ShiftResponse resp = shiftService.forceClose(30L, req);
+
+        assertEquals(new BigDecimal("100.00"), resp.getOpeningFloat());
+        assertEquals(new BigDecimal("250.00"), resp.getCashSales());
+        assertEquals(new BigDecimal("350.00"), resp.getExpectedCash());
+        assertEquals(new BigDecimal("10.00"), resp.getDifference());
+        assertEquals(ShiftStatus.CLOSED, resp.getStatus());
+        verify(shiftRepository).save(any(Shift.class));
     }
 }
 

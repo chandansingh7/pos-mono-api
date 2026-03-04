@@ -93,7 +93,7 @@ public class ShiftService {
         BigDecimal counted = request.getCountedCash();
         BigDecimal difference = counted.subtract(expected);
 
-        // ── Configurable business rules before closing ─────────────────────────
+        // ── Configurable business rules before closing (for cashier) ──────────
         BigDecimal maxDiff = shiftConfig.getMaxDifferenceAbsolute();
         if (maxDiff != null && maxDiff.compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal abs = difference.abs();
@@ -114,6 +114,22 @@ public class ShiftService {
             }
         }
 
+        long maxHours = shiftConfig.getMaxOpenHours();
+        if (maxHours > 0 && shift.getOpenedAt() != null) {
+            long openHours = Duration.between(shift.getOpenedAt(), now).toHours();
+            if (openHours > maxHours) {
+                log.warn("[SH003] Shift close rejected — open for {} h, maximum allowed: {}", openHours, maxHours);
+                throw new BadRequestException(ErrorCode.SH003,
+                        "Shift has been open for " + openHours + " hours (maximum " + maxHours + "). Ask an administrator to review.");
+            }
+        }
+
+        if (shiftConfig.isRequireSameDay() && shift.getOpenedAt() != null
+                && !shift.getOpenedAt().toLocalDate().equals(now.toLocalDate())) {
+            log.warn("[SH004] Shift close rejected — opened at {}, now {}", shift.getOpenedAt(), now);
+            throw new BadRequestException(ErrorCode.SH004);
+        }
+
         shift.setCashSales(cashSales);
         shift.setExpectedCash(expected);
         shift.setCountedCash(counted);
@@ -124,6 +140,43 @@ public class ShiftService {
         shift = shiftRepository.save(shift);
         log.info("Shift closed — id: {}, cashier: {}, expected: {}, counted: {}, diff: {}",
                 shift.getId(), cashier.getEmail(), expected, counted, difference);
+        return ShiftResponse.from(shift);
+    }
+
+    /**
+     * Administrative force-close that can be used to resolve stale shifts
+     * (e.g. left open overnight). This bypasses the duration / same-day
+     * constraints, but still computes cash sales, expected cash and the
+     * over/short difference using the provided countedCash value.
+     */
+    @Transactional
+    public ShiftResponse forceClose(Long shiftId, CloseShiftRequest request) {
+        Shift shift = shiftRepository.findById(shiftId)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.OR001, "Shift not found"));
+        if (shift.getStatus() != ShiftStatus.OPEN) {
+            throw new BadRequestException(ErrorCode.OR003, "Shift is not open");
+        }
+
+        User cashier = shift.getCashier();
+        LocalDateTime now = LocalDateTime.now();
+
+        BigDecimal cashSales = paymentRepository.sumByMethodAndStatusAndCashierAndCreatedAtBetween(
+                PaymentMethod.CASH, PaymentStatus.COMPLETED,
+                cashier, shift.getOpenedAt(), now);
+        BigDecimal expected = shift.getOpeningFloat().add(cashSales);
+        BigDecimal counted = request.getCountedCash();
+        BigDecimal difference = counted.subtract(expected);
+
+        shift.setCashSales(cashSales);
+        shift.setExpectedCash(expected);
+        shift.setCountedCash(counted);
+        shift.setDifference(difference);
+        shift.setStatus(ShiftStatus.CLOSED);
+        shift.setClosedAt(now);
+
+        shift = shiftRepository.save(shift);
+        log.info("Shift force-closed — id: {}, cashier: {}, expected: {}, counted: {}, diff: {}",
+                shift.getId(), cashier != null ? cashier.getEmail() : "n/a", expected, counted, difference);
         return ShiftResponse.from(shift);
     }
 

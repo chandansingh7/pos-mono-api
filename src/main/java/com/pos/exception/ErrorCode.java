@@ -62,6 +62,8 @@ public enum ErrorCode {
     // ── Shifts / cashier sessions ─────────────────────────────────────────────
     SH001("SH001", "Cash drawer difference exceeds allowed tolerance"),
     SH002("SH002", "Shift cannot be closed yet (minimum open time not reached)"),
+    SH003("SH003", "Shift has been open longer than the allowed maximum duration"),
+    SH004("SH004", "Shift cannot be closed because it was opened on a previous day; ask an administrator to review"),
 
     // ── Label ─────────────────────────────────────────────────────────────────
     LB001("LB001", "Label not found"),
