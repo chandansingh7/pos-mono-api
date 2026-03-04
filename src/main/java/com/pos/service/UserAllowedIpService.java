@@ -24,8 +24,24 @@ public class UserAllowedIpService {
     private final UserAllowedIpRepository userAllowedIpRepository;
 
     /**
+     * Normalize IP by stripping optional port (e.g. "24.28.169.48:57706" -> "24.28.169.48")
+     * so the same host is allowed regardless of port.
+     */
+    private static String normalizeIp(String ip) {
+        if (ip == null || ip.isBlank()) return ip;
+        String s = ip.trim();
+        int lastColon = s.lastIndexOf(':');
+        if (lastColon > 0 && lastColon < s.length() - 1) {
+            String after = s.substring(lastColon + 1);
+            if (after.matches("\\d+")) return s.substring(0, lastColon);
+        }
+        return s;
+    }
+
+    /**
      * Returns true if this user is allowed to access from the given IP.
      * If the user has no allowed IPs configured, all IPs are allowed.
+     * Comparison uses host-only (port stripped) so one allow-list entry covers all ports from that host.
      */
     @Transactional(readOnly = true)
     public boolean isAllowed(Long userId, String clientIp) {
@@ -38,8 +54,8 @@ public class UserAllowedIpService {
         if (allowed.isEmpty()) {
             return true;
         }
-        String normalized = clientIp.trim();
-        return allowed.stream().anyMatch(a -> normalized.equals(a.getIpAddress().trim()));
+        String normalized = normalizeIp(clientIp);
+        return allowed.stream().anyMatch(a -> normalized.equals(normalizeIp(a.getIpAddress())));
     }
 
     @Transactional(readOnly = true)
@@ -55,10 +71,11 @@ public class UserAllowedIpService {
     public List<String> addAllowedIp(String username, String ipAddress) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.US001));
-        String ip = (ipAddress != null) ? ipAddress.trim() : "";
-        if (ip.isEmpty()) {
+        String raw = (ipAddress != null) ? ipAddress.trim() : "";
+        if (raw.isEmpty()) {
             throw new BadRequestException(ErrorCode.VA001, "IP address is required");
         }
+        String ip = normalizeIp(raw);
         if (userAllowedIpRepository.existsByUserAndIpAddress(user, ip)) {
             return userAllowedIpRepository.findByUserOrderByCreatedAtDesc(user).stream()
                     .map(UserAllowedIp::getIpAddress)
@@ -79,10 +96,11 @@ public class UserAllowedIpService {
     public List<String> removeAllowedIp(String username, String ipAddress) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.US001));
-        String ip = (ipAddress != null) ? ipAddress.trim() : "";
-        if (ip.isEmpty()) {
+        String raw = (ipAddress != null) ? ipAddress.trim() : "";
+        if (raw.isEmpty()) {
             throw new BadRequestException(ErrorCode.VA001, "IP address is required");
         }
+        String ip = normalizeIp(raw);
         userAllowedIpRepository.deleteByUserAndIpAddress(user, ip);
         log.info("Removed allowed IP {} for user {}", ip, username);
         return userAllowedIpRepository.findByUserOrderByCreatedAtDesc(user).stream()
