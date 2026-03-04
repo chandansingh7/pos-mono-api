@@ -4,6 +4,7 @@ import com.pos.entity.Company;
 import lombok.Builder;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -29,6 +30,18 @@ public class CompanyResponse {
     /** Whether quick shift open/close controls are enabled on the POS screen. */
     private Boolean posQuickShiftControls;
 
+    /** Per-company override for maximum allowed absolute cash difference when closing a shift. */
+    private BigDecimal shiftMaxDifferenceAbsolute;
+
+    /** Per-company override for minimum open minutes before close is allowed. */
+    private Long shiftMinOpenMinutes;
+
+    /** Per-company override for maximum open hours before close is blocked. */
+    private Long shiftMaxOpenHours;
+
+    /** Per-company override for requiring same-day shift close. */
+    private Boolean shiftRequireSameDay;
+
     public static CompanyResponse from(Company c) {
         if (c == null) return null;
         return CompanyResponse.builder()
@@ -47,6 +60,10 @@ public class CompanyResponse {
                 .displayCurrency(c.getDisplayCurrency())
                 .locale(c.getLocale())
                 .posQuickShiftControls(c.getPosQuickShiftControls())
+                .shiftMaxDifferenceAbsolute(c.getShiftMaxDifferenceAbsolute())
+                .shiftMinOpenMinutes(c.getShiftMinOpenMinutes())
+                .shiftMaxOpenHours(c.getShiftMaxOpenHours())
+                .shiftRequireSameDay(c.getShiftRequireSameDay())
                 .updatedAt(c.getUpdatedAt())
                 .build();
     }

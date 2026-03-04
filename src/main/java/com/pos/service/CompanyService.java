@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 
 @Slf4j
 @Service
@@ -46,6 +47,15 @@ public class CompanyService {
         company.setDisplayCurrency(request.getDisplayCurrency() != null && !request.getDisplayCurrency().isBlank() ? request.getDisplayCurrency().trim() : "USD");
         company.setLocale(request.getLocale() != null && !request.getLocale().isBlank() ? request.getLocale().trim() : "en-US");
         company.setPosQuickShiftControls(request.getPosQuickShiftControls() != null ? request.getPosQuickShiftControls() : Boolean.FALSE);
+        // Shift behaviour rules (company-level overrides with sensible defaults)
+        company.setShiftMaxDifferenceAbsolute(
+                request.getShiftMaxDifferenceAbsolute() != null ? request.getShiftMaxDifferenceAbsolute() : BigDecimal.ZERO);
+        company.setShiftMinOpenMinutes(
+                request.getShiftMinOpenMinutes() != null ? request.getShiftMinOpenMinutes() : 0L);
+        company.setShiftMaxOpenHours(
+                request.getShiftMaxOpenHours() != null ? request.getShiftMaxOpenHours() : 0L);
+        company.setShiftRequireSameDay(
+                request.getShiftRequireSameDay() != null ? request.getShiftRequireSameDay() : Boolean.FALSE);
         company.setUpdatedBy(updatedBy);
         company = companyRepository.save(company);
         log.info("Company settings updated by {}", updatedBy);

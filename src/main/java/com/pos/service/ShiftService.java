@@ -1,6 +1,5 @@
 package com.pos.service;
 
-import com.pos.config.ShiftConfig;
 import com.pos.dto.request.CloseShiftRequest;
 import com.pos.dto.request.OpenShiftRequest;
 import com.pos.dto.response.ShiftListResponse;
@@ -39,7 +38,7 @@ public class ShiftService {
     private final ShiftRepository shiftRepository;
     private final PaymentRepository paymentRepository;
     private final UserRepository userRepository;
-    private final ShiftConfig shiftConfig;
+    private final ShiftRuleProvider shiftRuleProvider;
 
     @Transactional
     public ShiftResponse open(OpenShiftRequest request) {
@@ -94,7 +93,7 @@ public class ShiftService {
         BigDecimal difference = counted.subtract(expected);
 
         // ── Configurable business rules before closing (for cashier) ──────────
-        BigDecimal maxDiff = shiftConfig.getMaxDifferenceAbsolute();
+        BigDecimal maxDiff = shiftRuleProvider.maxDifferenceAbsolute();
         if (maxDiff != null && maxDiff.compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal abs = difference.abs();
             if (abs.compareTo(maxDiff) > 0) {
@@ -104,7 +103,7 @@ public class ShiftService {
             }
         }
 
-        long minMinutes = shiftConfig.getMinOpenMinutes();
+        long minMinutes = shiftRuleProvider.minOpenMinutes();
         if (minMinutes > 0 && shift.getOpenedAt() != null) {
             long openMinutes = Duration.between(shift.getOpenedAt(), now).toMinutes();
             if (openMinutes < minMinutes) {
@@ -114,7 +113,7 @@ public class ShiftService {
             }
         }
 
-        long maxHours = shiftConfig.getMaxOpenHours();
+        long maxHours = shiftRuleProvider.maxOpenHours();
         if (maxHours > 0 && shift.getOpenedAt() != null) {
             long openHours = Duration.between(shift.getOpenedAt(), now).toHours();
             if (openHours > maxHours) {
@@ -124,7 +123,7 @@ public class ShiftService {
             }
         }
 
-        if (shiftConfig.isRequireSameDay() && shift.getOpenedAt() != null
+        if (shiftRuleProvider.requireSameDay() && shift.getOpenedAt() != null
                 && !shift.getOpenedAt().toLocalDate().equals(now.toLocalDate())) {
             log.warn("[SH004] Shift close rejected — opened at {}, now {}", shift.getOpenedAt(), now);
             throw new BadRequestException(ErrorCode.SH004);

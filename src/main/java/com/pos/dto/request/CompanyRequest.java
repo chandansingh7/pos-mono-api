@@ -3,6 +3,8 @@ package com.pos.dto.request;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Data
 public class CompanyRequest {
 
@@ -33,4 +35,31 @@ public class CompanyRequest {
      * When false or null, cashiers must use the Shifts page to manage shifts.
      */
     private Boolean posQuickShiftControls;
+
+    /**
+     * Maximum absolute cash difference (over/short) allowed when closing a shift.
+     * If {@code null} the environment default is used; if {@code 0}, no restriction
+     * is enforced.
+     */
+    private BigDecimal shiftMaxDifferenceAbsolute;
+
+    /**
+     * Minimum number of minutes a shift must be open before it can be closed.
+     * If {@code null} the environment default is used; if {@code 0}, no minimum
+     * duration is enforced.
+     */
+    private Long shiftMinOpenMinutes;
+
+    /**
+     * Maximum number of hours a shift is allowed to remain open.
+     * If {@code null} the environment default is used; if {@code 0}, no maximum
+     * duration is enforced.
+     */
+    private Long shiftMaxOpenHours;
+
+    /**
+     * When true, disallow closing a shift that was opened on a previous calendar
+     * day. If {@code null}, the environment default is used.
+     */
+    private Boolean shiftRequireSameDay;
 }

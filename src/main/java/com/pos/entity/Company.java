@@ -3,6 +3,7 @@ package com.pos.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -63,6 +64,36 @@ public class Company {
      */
     @Column(name = "pos_quick_shift_controls")
     private Boolean posQuickShiftControls;
+
+    /**
+     * Optional per-company override for maximum allowed absolute cash difference
+     * when closing a shift. If null, falls back to environment config; if 0,
+     * no restriction is enforced.
+     */
+    @Column(name = "shift_max_difference_abs", precision = 19, scale = 2)
+    private BigDecimal shiftMaxDifferenceAbsolute;
+
+    /**
+     * Optional minimum number of minutes a shift must be open before it can be closed.
+     * If null, falls back to environment config; if 0, no minimum duration is enforced.
+     */
+    @Column(name = "shift_min_open_minutes")
+    private Long shiftMinOpenMinutes;
+
+    /**
+     * Optional maximum number of hours a shift is allowed to remain open.
+     * If null, falls back to environment config; if 0, no maximum duration is enforced.
+     */
+    @Column(name = "shift_max_open_hours")
+    private Long shiftMaxOpenHours;
+
+    /**
+     * Optional per-company flag requiring shifts to be closed on the same
+     * calendar day they were opened. If null, falls back to environment
+     * config; when false, cross-day closes are allowed.
+     */
+    @Column(name = "shift_require_same_day")
+    private Boolean shiftRequireSameDay;
 
     private LocalDateTime updatedAt;
 

@@ -1,6 +1,5 @@
 package com.pos.service;
 
-import com.pos.config.ShiftConfig;
 import com.pos.dto.request.CloseShiftRequest;
 import com.pos.dto.request.OpenShiftRequest;
 import com.pos.dto.response.ShiftResponse;
@@ -39,7 +38,7 @@ class ShiftServiceTest {
     @Mock
     private UserRepository userRepository;
     @Mock
-    private ShiftConfig shiftConfig;
+    private ShiftRuleProvider shiftRuleProvider;
 
     @InjectMocks
     private ShiftService shiftService;
@@ -58,10 +57,10 @@ class ShiftServiceTest {
                 new TestingAuthenticationToken(cashier, "pw", cashier.getAuthorities())
         );
 
-        when(shiftConfig.getMaxDifferenceAbsolute()).thenReturn(BigDecimal.ZERO);
-        when(shiftConfig.getMinOpenMinutes()).thenReturn(0L);
-        when(shiftConfig.getMaxOpenHours()).thenReturn(0L);
-        when(shiftConfig.isRequireSameDay()).thenReturn(false);
+        when(shiftRuleProvider.maxDifferenceAbsolute()).thenReturn(BigDecimal.ZERO);
+        when(shiftRuleProvider.minOpenMinutes()).thenReturn(0L);
+        when(shiftRuleProvider.maxOpenHours()).thenReturn(0L);
+        when(shiftRuleProvider.requireSameDay()).thenReturn(false);
     }
 
     @Test
@@ -138,7 +137,7 @@ class ShiftServiceTest {
         when(paymentRepository.sumByMethodAndStatusAndCashierAndCreatedAtBetween(
                 eq(PaymentMethod.CASH), eq(PaymentStatus.COMPLETED), eq(cashier), any(), any()))
                 .thenReturn(new BigDecimal("250.00"));
-        when(shiftConfig.getMaxDifferenceAbsolute()).thenReturn(new BigDecimal("5.00"));
+        when(shiftRuleProvider.maxDifferenceAbsolute()).thenReturn(new BigDecimal("5.00"));
 
         CloseShiftRequest req = new CloseShiftRequest();
         // expected = 350 → diff = 20 > 5 tolerance
@@ -163,7 +162,7 @@ class ShiftServiceTest {
         when(paymentRepository.sumByMethodAndStatusAndCashierAndCreatedAtBetween(
                 eq(PaymentMethod.CASH), eq(PaymentStatus.COMPLETED), eq(cashier), any(), any()))
                 .thenReturn(new BigDecimal("0.00"));
-        when(shiftConfig.getMinOpenMinutes()).thenReturn(30L);
+        when(shiftRuleProvider.minOpenMinutes()).thenReturn(30L);
 
         CloseShiftRequest req = new CloseShiftRequest();
         req.setCountedCash(new BigDecimal("100.00"));
@@ -187,7 +186,7 @@ class ShiftServiceTest {
         when(paymentRepository.sumByMethodAndStatusAndCashierAndCreatedAtBetween(
                 eq(PaymentMethod.CASH), eq(PaymentStatus.COMPLETED), eq(cashier), any(), any()))
                 .thenReturn(new BigDecimal("0.00"));
-        when(shiftConfig.getMaxOpenHours()).thenReturn(12L);
+        when(shiftRuleProvider.maxOpenHours()).thenReturn(12L);
 
         CloseShiftRequest req = new CloseShiftRequest();
         req.setCountedCash(new BigDecimal("100.00"));
@@ -211,7 +210,7 @@ class ShiftServiceTest {
         when(paymentRepository.sumByMethodAndStatusAndCashierAndCreatedAtBetween(
                 eq(PaymentMethod.CASH), eq(PaymentStatus.COMPLETED), eq(cashier), any(), any()))
                 .thenReturn(new BigDecimal("0.00"));
-        when(shiftConfig.isRequireSameDay()).thenReturn(true);
+        when(shiftRuleProvider.requireSameDay()).thenReturn(true);
 
         CloseShiftRequest req = new CloseShiftRequest();
         req.setCountedCash(new BigDecimal("100.00"));
