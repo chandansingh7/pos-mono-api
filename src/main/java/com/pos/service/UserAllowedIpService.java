@@ -5,7 +5,9 @@ import com.pos.entity.UserAllowedIp;
 import com.pos.exception.BadRequestException;
 import com.pos.exception.ErrorCode;
 import com.pos.exception.ResourceNotFoundException;
+import com.pos.entity.UserBlockedIp;
 import com.pos.repository.UserAllowedIpRepository;
+import com.pos.repository.UserBlockedIpRepository;
 import com.pos.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +24,7 @@ public class UserAllowedIpService {
 
     private final UserRepository userRepository;
     private final UserAllowedIpRepository userAllowedIpRepository;
+    private final UserBlockedIpRepository userBlockedIpRepository;
 
     /**
      * Normalize IP by stripping optional port (e.g. "24.28.169.48:57706" -> "24.28.169.48")
@@ -40,8 +43,9 @@ public class UserAllowedIpService {
 
     /**
      * Returns true if this user is allowed to access from the given IP.
-     * If the user has no allowed IPs configured, all IPs are allowed.
-     * Comparison uses host-only (port stripped) so one allow-list entry covers all ports from that host.
+     * Block list is checked first (blocked IPs always denied). Then allow list:
+     * if the user has no allowed IPs configured, all non-blocked IPs are allowed.
+     * Comparison uses host-only (port stripped).
      */
     @Transactional(readOnly = true)
     public boolean isAllowed(Long userId, String clientIp) {
@@ -50,11 +54,15 @@ public class UserAllowedIpService {
         }
         User user = userRepository.findById(userId).orElse(null);
         if (user == null) return true;
+        String normalized = normalizeIp(clientIp);
+        List<UserBlockedIp> blocked = userBlockedIpRepository.findByUserOrderByCreatedAtDesc(user);
+        if (blocked.stream().anyMatch(b -> normalized.equals(normalizeIp(b.getIpAddress())))) {
+            return false;
+        }
         List<UserAllowedIp> allowed = userAllowedIpRepository.findByUserOrderByCreatedAtDesc(user);
         if (allowed.isEmpty()) {
             return true;
         }
-        String normalized = normalizeIp(clientIp);
         return allowed.stream().anyMatch(a -> normalized.equals(normalizeIp(a.getIpAddress())));
     }
 
