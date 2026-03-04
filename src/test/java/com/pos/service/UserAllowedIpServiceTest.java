@@ -5,7 +5,9 @@ import com.pos.entity.UserAllowedIp;
 import com.pos.enums.Role;
 import com.pos.exception.BadRequestException;
 import com.pos.exception.ResourceNotFoundException;
+import com.pos.entity.UserBlockedIp;
 import com.pos.repository.UserAllowedIpRepository;
+import com.pos.repository.UserBlockedIpRepository;
 import com.pos.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,6 +31,8 @@ class UserAllowedIpServiceTest {
     private UserRepository userRepository;
     @Mock
     private UserAllowedIpRepository userAllowedIpRepository;
+    @Mock
+    private UserBlockedIpRepository userBlockedIpRepository;
 
     @InjectMocks
     private UserAllowedIpService userAllowedIpService;
@@ -47,6 +51,7 @@ class UserAllowedIpServiceTest {
     @Test
     void isAllowed_returnsTrueWhenUserHasNoAllowedIps() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userBlockedIpRepository.findByUserOrderByCreatedAtDesc(user)).thenReturn(List.of());
         when(userAllowedIpRepository.findByUserOrderByCreatedAtDesc(user)).thenReturn(List.of());
 
         assertTrue(userAllowedIpService.isAllowed(1L, "192.168.1.1"));
@@ -55,6 +60,7 @@ class UserAllowedIpServiceTest {
     @Test
     void isAllowed_returnsTrueWhenIpIsInAllowList() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userBlockedIpRepository.findByUserOrderByCreatedAtDesc(user)).thenReturn(List.of());
         UserAllowedIp allowed = UserAllowedIp.builder().user(user).ipAddress("192.168.1.1").build();
         when(userAllowedIpRepository.findByUserOrderByCreatedAtDesc(user)).thenReturn(List.of(allowed));
 
@@ -64,10 +70,21 @@ class UserAllowedIpServiceTest {
     @Test
     void isAllowed_returnsFalseWhenIpNotInAllowList() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userBlockedIpRepository.findByUserOrderByCreatedAtDesc(user)).thenReturn(List.of());
         UserAllowedIp allowed = UserAllowedIp.builder().user(user).ipAddress("192.168.1.1").build();
         when(userAllowedIpRepository.findByUserOrderByCreatedAtDesc(user)).thenReturn(List.of(allowed));
 
         assertFalse(userAllowedIpService.isAllowed(1L, "10.0.0.1"));
+    }
+
+    @Test
+    void isAllowed_returnsFalseWhenIpIsBlocked() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        UserBlockedIp blocked = UserBlockedIp.builder().user(user).ipAddress("192.168.1.1").build();
+        when(userBlockedIpRepository.findByUserOrderByCreatedAtDesc(user)).thenReturn(List.of(blocked));
+        when(userAllowedIpRepository.findByUserOrderByCreatedAtDesc(user)).thenReturn(List.of());
+
+        assertFalse(userAllowedIpService.isAllowed(1L, "192.168.1.1"));
     }
 
     @Test
