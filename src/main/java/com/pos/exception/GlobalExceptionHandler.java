@@ -33,7 +33,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleBadRequest(BadRequestException ex) {
         ErrorCode code = ex.getErrorCode();
         log.warn("[{}] Bad request: {}", code != null ? code.getCode() : "??", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+        HttpStatus status = (code == ErrorCode.AU008) ? HttpStatus.FORBIDDEN : HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status)
                 .body(code != null
                         ? ApiResponse.error(code)
                         : ApiResponse.error(ex.getMessage()));

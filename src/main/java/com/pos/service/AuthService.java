@@ -27,13 +27,18 @@ public class AuthService {
     private final PasswordEncoder       passwordEncoder;
     private final JwtTokenProvider      jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
+    private final UserAllowedIpService userAllowedIpService;
 
-    public AuthResponse login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request, String clientIp) {
         log.info("Login attempt for user: {}", request.getUsername());
         Authentication auth = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
         );
         User user = (User) auth.getPrincipal();
+        if (!userAllowedIpService.isAllowed(user.getId(), clientIp)) {
+            log.warn("[AU008] Login rejected — IP not allowed for user: {}, IP: {}", user.getUsername(), clientIp);
+            throw new BadRequestException(ErrorCode.AU008);
+        }
         String token = jwtTokenProvider.generateToken(user);
         log.info("Login successful — user: {}, role: {}", user.getUsername(), user.getRole());
 

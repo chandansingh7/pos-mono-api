@@ -108,7 +108,11 @@ public class AccessLogService {
         return result;
     }
 
-    private String resolveClientIp(HttpServletRequest request) {
+    /**
+     * Resolve client IP from request (supports X-Forwarded-For and similar headers).
+     * Public so auth and filters can use it for IP allow-list enforcement.
+     */
+    public String resolveClientIp(HttpServletRequest request) {
         String header = request.getHeader("X-Forwarded-For");
         if (header != null && !header.isBlank()) {
             // In case of multiple proxies, first IP is the original client

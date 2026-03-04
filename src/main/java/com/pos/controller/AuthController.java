@@ -4,11 +4,12 @@ import com.pos.dto.request.LoginRequest;
 import com.pos.dto.request.RegisterRequest;
 import com.pos.dto.response.ApiResponse;
 import com.pos.dto.response.AuthResponse;
+import com.pos.service.AccessLogService;
 import com.pos.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,10 +18,14 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final AccessLogService accessLogService;
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(ApiResponse.ok(authService.login(request)));
+    public ResponseEntity<ApiResponse<AuthResponse>> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest) {
+        String clientIp = accessLogService.resolveClientIp(httpRequest);
+        return ResponseEntity.ok(ApiResponse.ok(authService.login(request, clientIp)));
     }
 
     @PostMapping("/register")
