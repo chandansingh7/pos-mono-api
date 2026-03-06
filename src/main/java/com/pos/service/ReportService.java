@@ -42,6 +42,17 @@ public class ReportService {
         return buildReport("Monthly: " + year + "-" + String.format("%02d", month), from, to);
     }
 
+    /** Custom date range report. */
+    public SalesReportResponse getRangeSummary(LocalDate fromDate, LocalDate toDate) {
+        log.info("Generating range sales report: {} to {}", fromDate, toDate);
+        LocalDateTime from = fromDate.atStartOfDay();
+        LocalDateTime to   = toDate.plusDays(1).atStartOfDay();
+        String period = fromDate.equals(toDate)
+                ? ("Day: " + fromDate)
+                : ("Range: " + fromDate + " to " + toDate);
+        return buildReport(period, from, to);
+    }
+
     private SalesReportResponse buildReport(String period, LocalDateTime from, LocalDateTime to) {
         long       totalOrders  = orderRepository.countCompletedBetween(from, to);
         BigDecimal totalRevenue = orderRepository.sumTotalBetween(from, to);
@@ -81,6 +92,12 @@ public class ReportService {
         SalesReportResponse report = getMonthlySummary(year, month);
         String title = year + "-" + String.format("%02d", month);
         return buildReportExcel("Monthly Sales - " + title, report);
+    }
+
+    public byte[] exportRangeToExcel(LocalDate fromDate, LocalDate toDate) {
+        SalesReportResponse report = getRangeSummary(fromDate, toDate);
+        String title = fromDate + "_to_" + toDate;
+        return buildReportExcel("Sales Range - " + title, report);
     }
 
     private byte[] buildReportExcel(String sheetName, SalesReportResponse report) {

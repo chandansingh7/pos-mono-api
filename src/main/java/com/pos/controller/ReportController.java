@@ -35,6 +35,16 @@ public class ReportController {
         return ResponseEntity.ok(ApiResponse.ok(reportService.getMonthlySummary(year, month)));
     }
 
+    @GetMapping("/sales/range")
+    public ResponseEntity<ApiResponse<SalesReportResponse>> rangeSales(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        if (!from.isBefore(to) && !from.equals(to)) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Invalid range: from must be before or equal to to"));
+        }
+        return ResponseEntity.ok(ApiResponse.ok(reportService.getRangeSummary(from, to)));
+    }
+
     @GetMapping(value = "/sales/daily/export", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     public ResponseEntity<byte[]> exportDailyExcel(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
@@ -54,6 +64,22 @@ public class ReportController {
             @RequestParam(defaultValue = "#{T(java.time.LocalDate).now().getMonthValue()}") int month) {
         byte[] body = reportService.exportMonthlyToExcel(year, month);
         String filename = "sales-monthly-" + year + "-" + String.format("%02d", month) + ".xlsx";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .contentLength(body.length)
+                .body(body);
+    }
+
+    @GetMapping(value = "/sales/range/export", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    public ResponseEntity<byte[]> exportRangeExcel(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        if (!from.isBefore(to) && !from.equals(to)) {
+            return ResponseEntity.badRequest().build();
+        }
+        byte[] body = reportService.exportRangeToExcel(from, to);
+        String filename = "sales-range-" + from + "-to-" + to + ".xlsx";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
