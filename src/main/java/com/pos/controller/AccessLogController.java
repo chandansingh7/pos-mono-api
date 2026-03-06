@@ -28,8 +28,9 @@ public class AccessLogController {
     public ResponseEntity<ApiResponse<Page<AccessLogResponse>>> getLogs(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String username) {
-        Page<AccessLogResponse> logs = accessLogService.list(username, page, size);
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String sort) {
+        Page<AccessLogResponse> logs = accessLogService.list(username, page, size, sort);
         return ResponseEntity.ok(ApiResponse.ok(logs));
     }
 
@@ -37,8 +38,9 @@ public class AccessLogController {
     public ResponseEntity<ApiResponse<Page<AccessLogSummaryResponse>>> getSummary(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String username) {
-        Page<AccessLogSummaryResponse> summary = accessLogService.listSummary(username, page, size);
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String sort) {
+        Page<AccessLogSummaryResponse> summary = accessLogService.listSummary(username, page, size, sort);
         return ResponseEntity.ok(ApiResponse.ok(summary));
     }
 

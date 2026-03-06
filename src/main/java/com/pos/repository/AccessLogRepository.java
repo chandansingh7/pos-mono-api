@@ -9,9 +9,9 @@ import java.util.List;
 
 public interface AccessLogRepository extends JpaRepository<AccessLog, Long> {
 
-    Page<AccessLog> findAllByOrderByCreatedAtDesc(Pageable pageable);
+    Page<AccessLog> findAll(Pageable pageable);
 
-    Page<AccessLog> findByUsernameOrderByCreatedAtDesc(String username, Pageable pageable);
+    Page<AccessLog> findByUsername(String username, Pageable pageable);
 
     List<AccessLog> findByUsername(String username);
 }

@@ -12,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.Authentication;
@@ -71,12 +72,26 @@ public class AccessLogService {
     }
 
     @Transactional(readOnly = true)
-    public Page<AccessLogResponse> list(String username, int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+    public Page<AccessLogResponse> list(String username, int page, int size, String sortParam) {
+        Sort sort = parseSort(sortParam);
+        Pageable pageable = PageRequest.of(page, size, sort);
         Page<AccessLog> logs = (username == null || username.isBlank())
-                ? accessLogRepository.findAllByOrderByCreatedAtDesc(pageable)
-                : accessLogRepository.findByUsernameOrderByCreatedAtDesc(username, pageable);
+                ? accessLogRepository.findAll(pageable)
+                : accessLogRepository.findByUsername(username, pageable);
         return logs.map(AccessLogResponse::from);
+    }
+
+    /** Parse "property,direction" (e.g. "createdAt,desc") into Sort. Defaults to createdAt,desc. */
+    private Sort parseSort(String sortParam) {
+        if (sortParam == null || sortParam.isBlank()) {
+            return Sort.by(Sort.Direction.DESC, "createdAt");
+        }
+        String[] parts = sortParam.trim().split(",");
+        String prop = parts[0].trim();
+        if (prop.isEmpty()) return Sort.by(Sort.Direction.DESC, "createdAt");
+        Sort.Direction dir = parts.length > 1 && "asc".equalsIgnoreCase(parts[1].trim())
+                ? Sort.Direction.ASC : Sort.Direction.DESC;
+        return Sort.by(dir, prop);
     }
 
     /**
@@ -84,11 +99,11 @@ public class AccessLogService {
      * Based on the most recent {@value #SUMMARY_FETCH_CAP} log entries to keep response size manageable.
      */
     @Transactional(readOnly = true)
-    public Page<AccessLogSummaryResponse> listSummary(String username, int page, int size) {
-        Pageable fetchAll = PageRequest.of(0, SUMMARY_FETCH_CAP);
+    public Page<AccessLogSummaryResponse> listSummary(String username, int page, int size, String sortParam) {
+        Pageable fetchAll = PageRequest.of(0, SUMMARY_FETCH_CAP, Sort.by(Sort.Direction.DESC, "createdAt"));
         List<AccessLog> recent = (username == null || username.isBlank())
-                ? accessLogRepository.findAllByOrderByCreatedAtDesc(fetchAll).getContent()
-                : accessLogRepository.findByUsernameOrderByCreatedAtDesc(username, fetchAll).getContent();
+                ? accessLogRepository.findAll(fetchAll).getContent()
+                : accessLogRepository.findByUsername(username, fetchAll).getContent();
 
         Map<String, List<AccessLog>> byKey = recent.stream()
                 .filter(l -> l.getUsername() != null && l.getIpAddress() != null && !l.getIpAddress().isBlank())
@@ -116,13 +131,37 @@ public class AccessLogService {
                     .lastWhen(latest.getCreatedAt())
                     .build());
         }
-        list.sort(Comparator.comparing(AccessLogSummaryResponse::getLastWhen, Comparator.nullsLast(Comparator.reverseOrder())));
+        sortSummaryList(list, sortParam);
 
         int total = list.size();
         int from = Math.min(page * size, total);
         int to = Math.min(from + size, total);
         List<AccessLogSummaryResponse> content = from < to ? list.subList(from, to) : Collections.emptyList();
         return new PageImpl<>(content, PageRequest.of(page, size), total);
+    }
+
+    private void sortSummaryList(List<AccessLogSummaryResponse> list, String sortParam) {
+        String[] parts = (sortParam != null && !sortParam.isBlank()) ? sortParam.trim().split(",") : new String[0];
+        String prop = parts.length > 0 && !parts[0].trim().isEmpty() ? parts[0].trim().toLowerCase() : "lastwhen";
+        boolean asc = parts.length > 1 && "asc".equalsIgnoreCase(parts[1].trim());
+        Comparator<AccessLogSummaryResponse> c;
+        switch (prop) {
+            case "username":
+                c = Comparator.comparing(AccessLogSummaryResponse::getUsername, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+                break;
+            case "ipaddress":
+                c = Comparator.comparing(AccessLogSummaryResponse::getIpAddress, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+                break;
+            case "requestcount":
+                c = Comparator.comparingLong(AccessLogSummaryResponse::getRequestCount);
+                break;
+            case "lastwhen":
+            default:
+                c = Comparator.comparing(AccessLogSummaryResponse::getLastWhen, Comparator.nullsLast(Comparator.naturalOrder()));
+                break;
+        }
+        if (!asc) c = c.reversed();
+        list.sort(c);
     }
 
     private static String groupKey(AccessLog l) {
