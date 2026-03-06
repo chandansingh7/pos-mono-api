@@ -27,6 +27,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+/**
+ * Full backup and restore (JSON or SQL). Restore is restricted to ADMIN via controller.
+ * Note: Backup files are not encrypted. Anyone with the backup file and database access
+ * can run the SQL or read the JSON and view/restore data outside this application.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
