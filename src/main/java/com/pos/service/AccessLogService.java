@@ -1,6 +1,7 @@
 package com.pos.service;
 
 import com.pos.dto.response.AccessLogResponse;
+import com.pos.dto.response.AccessLogSummaryResponse;
 import com.pos.dto.response.UserIpUsageResponse;
 import com.pos.entity.AccessLog;
 import com.pos.repository.AccessLogRepository;
@@ -8,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AccessLogService {
+
+    /** Max recent log entries to consider when building summary (grouped by user + normalized IP). */
+    private static final int SUMMARY_FETCH_CAP = 5000;
 
     private final AccessLogRepository accessLogRepository;
 
@@ -74,19 +79,87 @@ public class AccessLogService {
         return logs.map(AccessLogResponse::from);
     }
 
+    /**
+     * Returns one row per (username, normalized IP) with request count and last activity.
+     * Based on the most recent {@value #SUMMARY_FETCH_CAP} log entries to keep response size manageable.
+     */
+    @Transactional(readOnly = true)
+    public Page<AccessLogSummaryResponse> listSummary(String username, int page, int size) {
+        Pageable fetchAll = PageRequest.of(0, SUMMARY_FETCH_CAP);
+        List<AccessLog> recent = (username == null || username.isBlank())
+                ? accessLogRepository.findAllByOrderByCreatedAtDesc(fetchAll).getContent()
+                : accessLogRepository.findByUsernameOrderByCreatedAtDesc(username, fetchAll).getContent();
+
+        Map<String, List<AccessLog>> byKey = recent.stream()
+                .filter(l -> l.getUsername() != null && l.getIpAddress() != null && !l.getIpAddress().isBlank())
+                .collect(Collectors.groupingBy(AccessLogService::groupKey));
+
+        List<AccessLogSummaryResponse> list = new ArrayList<>();
+        for (List<AccessLog> entries : byKey.values()) {
+            if (entries.isEmpty()) continue;
+            AccessLog latest = entries.stream()
+                    .max(Comparator.comparing(AccessLog::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder())))
+                    .orElse(entries.get(0));
+            String country = entries.stream()
+                    .map(AccessLog::getCountry)
+                    .filter(Objects::nonNull)
+                    .filter(c -> !c.isBlank())
+                    .findFirst()
+                    .orElse(null);
+            list.add(AccessLogSummaryResponse.builder()
+                    .username(latest.getUsername())
+                    .ipAddress(normalizeIp(latest.getIpAddress()))
+                    .country(country)
+                    .requestCount(entries.size())
+                    .lastAction(latest.getAction())
+                    .lastPath(latest.getPath())
+                    .lastWhen(latest.getCreatedAt())
+                    .build());
+        }
+        list.sort(Comparator.comparing(AccessLogSummaryResponse::getLastWhen, Comparator.nullsLast(Comparator.reverseOrder())));
+
+        int total = list.size();
+        int from = Math.min(page * size, total);
+        int to = Math.min(from + size, total);
+        List<AccessLogSummaryResponse> content = from < to ? list.subList(from, to) : Collections.emptyList();
+        return new PageImpl<>(content, PageRequest.of(page, size), total);
+    }
+
+    private static String groupKey(AccessLog l) {
+        String u = l.getUsername() != null ? l.getUsername() : "";
+        String ip = l.getIpAddress() != null && !l.getIpAddress().isBlank()
+                ? normalizeIp(l.getIpAddress()) : "";
+        return u + "\0" + ip;
+    }
+
+    /**
+     * Normalize IP by stripping port (e.g. "24.28.169.48:61639" -> "24.28.169.48")
+     * so allow/block and reporting work by host, not per-connection.
+     */
+    public static String normalizeIp(String ip) {
+        if (ip == null || ip.isBlank()) return ip;
+        String s = ip.trim();
+        int colon = s.lastIndexOf(':');
+        if (colon > 0 && colon < s.length() - 1 && s.substring(colon + 1).matches("\\d+")) {
+            return s.substring(0, colon);
+        }
+        return s;
+    }
+
     @Transactional(readOnly = true)
     public List<UserIpUsageResponse> listIpsForUser(String username) {
         if (username == null || username.isBlank()) {
             return Collections.emptyList();
         }
         List<AccessLog> logs = accessLogRepository.findByUsername(username);
+        // Group by normalized IP (host only) so we show one row per host, not per host:port
         Map<String, List<AccessLog>> byIp = logs.stream()
                 .filter(l -> l.getIpAddress() != null && !l.getIpAddress().isBlank())
-                .collect(Collectors.groupingBy(AccessLog::getIpAddress));
+                .collect(Collectors.groupingBy(l -> normalizeIp(l.getIpAddress())));
 
         List<UserIpUsageResponse> result = new ArrayList<>();
         for (Map.Entry<String, List<AccessLog>> entry : byIp.entrySet()) {
-            String ip = entry.getKey();
+            String normalizedIp = entry.getKey();
             List<AccessLog> entries = entry.getValue();
             long count = entries.size();
             LocalDateTime lastUsed = entries.stream()
@@ -100,7 +173,7 @@ public class AccessLogService {
                     .filter(c -> !c.isBlank())
                     .findFirst()
                     .orElse(null);
-            result.add(new UserIpUsageResponse(ip, country, count, lastUsed));
+            result.add(new UserIpUsageResponse(normalizedIp, country, count, lastUsed));
         }
 
         result.sort(Comparator.comparing(UserIpUsageResponse::getLastUsedAt,

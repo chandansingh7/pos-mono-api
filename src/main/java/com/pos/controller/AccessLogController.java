@@ -1,6 +1,7 @@
 package com.pos.controller;
 
 import com.pos.dto.response.AccessLogResponse;
+import com.pos.dto.response.AccessLogSummaryResponse;
 import com.pos.dto.response.ApiResponse;
 import com.pos.dto.response.UserIpUsageResponse;
 import com.pos.service.AccessLogService;
@@ -30,6 +31,15 @@ public class AccessLogController {
             @RequestParam(required = false) String username) {
         Page<AccessLogResponse> logs = accessLogService.list(username, page, size);
         return ResponseEntity.ok(ApiResponse.ok(logs));
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<ApiResponse<Page<AccessLogSummaryResponse>>> getSummary(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String username) {
+        Page<AccessLogSummaryResponse> summary = accessLogService.listSummary(username, page, size);
+        return ResponseEntity.ok(ApiResponse.ok(summary));
     }
 
     @GetMapping("/ips")
