@@ -77,6 +77,9 @@ public enum ErrorCode {
     // ── Validation ────────────────────────────────────────────────────────────
     VA001("VA001", "One or more fields failed validation"),
 
+    // ── Backup / Restore ────────────────────────────────────────────────────
+    BR001("BR001", "Backup or restore failed"),
+
     // ── Server / unexpected ───────────────────────────────────────────────────
     SV001("SV001", "An unexpected server error occurred, please try again"),
     SV002("SV002", "Failed to store image");
