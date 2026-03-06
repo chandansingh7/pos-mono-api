@@ -37,6 +37,12 @@ public class CompanyRequest {
     private Boolean posQuickShiftControls;
 
     /**
+     * POS layout: "grid" (default) or "scan". Scan layout shows product list at top
+     * and a single "Search or key in item" field; barcode match adds directly to cart.
+     */
+    private String posLayout;
+
+    /**
      * Maximum absolute cash difference (over/short) allowed when closing a shift.
      * If {@code null} the environment default is used; if {@code 0}, no restriction
      * is enforced.

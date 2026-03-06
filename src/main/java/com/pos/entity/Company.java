@@ -66,6 +66,13 @@ public class Company {
     private Boolean posQuickShiftControls;
 
     /**
+     * POS screen layout: "grid" (product grid + separate search/barcode) or "scan"
+     * (product list at top + single search/key-in field; barcode match adds directly to cart).
+     */
+    @Column(name = "pos_layout", length = 20)
+    private String posLayout;
+
+    /**
      * Optional per-company override for maximum allowed absolute cash difference
      * when closing a shift. If null, falls back to environment config; if 0,
      * no restriction is enforced.

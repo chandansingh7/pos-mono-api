@@ -100,6 +100,7 @@ public class BackupRestoreService {
                 .address(c.getAddress()).phone(c.getPhone()).email(c.getEmail()).taxId(c.getTaxId()).website(c.getWebsite())
                 .receiptFooterText(c.getReceiptFooterText()).receiptPaperSize(c.getReceiptPaperSize()).receiptHeaderText(c.getReceiptHeaderText())
                 .displayCurrency(c.getDisplayCurrency()).locale(c.getLocale()).posQuickShiftControls(c.getPosQuickShiftControls())
+                .posLayout(c.getPosLayout())
                 .shiftMaxDifferenceAbsolute(c.getShiftMaxDifferenceAbsolute()).shiftMinOpenMinutes(c.getShiftMinOpenMinutes())
                 .shiftMaxOpenHours(c.getShiftMaxOpenHours()).shiftRequireSameDay(c.getShiftRequireSameDay())
                 .updatedAt(c.getUpdatedAt()).updatedBy(c.getUpdatedBy())
@@ -231,9 +232,10 @@ public class BackupRestoreService {
     private void insertAllInOrder(JdbcTemplate jdbc, BackupDocument doc) {
         if (doc.getCompany() != null) {
             CompanyExport c = doc.getCompany();
-            jdbc.update("INSERT INTO company (id,name,logo_url,favicon_url,address,phone,email,tax_id,website,receipt_footer_text,receipt_paper_size,receipt_header_text,display_currency,locale,pos_quick_shift_controls,shift_max_difference_abs,shift_min_open_minutes,shift_max_open_hours,shift_require_same_day,updated_at,updated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            jdbc.update("INSERT INTO company (id,name,logo_url,favicon_url,address,phone,email,tax_id,website,receipt_footer_text,receipt_paper_size,receipt_header_text,display_currency,locale,pos_quick_shift_controls,pos_layout,shift_max_difference_abs,shift_min_open_minutes,shift_max_open_hours,shift_require_same_day,updated_at,updated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     c.getId(), c.getName(), c.getLogoUrl(), c.getFaviconUrl(), c.getAddress(), c.getPhone(), c.getEmail(), c.getTaxId(), c.getWebsite(),
                     c.getReceiptFooterText(), c.getReceiptPaperSize(), c.getReceiptHeaderText(), c.getDisplayCurrency(), c.getLocale(), c.getPosQuickShiftControls(),
+                    c.getPosLayout() != null ? c.getPosLayout() : "grid",
                     c.getShiftMaxDifferenceAbsolute(), c.getShiftMinOpenMinutes(), c.getShiftMaxOpenHours(), c.getShiftRequireSameDay(), c.getUpdatedAt(), c.getUpdatedBy());
         }
         if (doc.getCategories() != null) for (CategoryExport e : doc.getCategories()) {

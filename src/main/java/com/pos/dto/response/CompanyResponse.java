@@ -30,6 +30,9 @@ public class CompanyResponse {
     /** Whether quick shift open/close controls are enabled on the POS screen. */
     private Boolean posQuickShiftControls;
 
+    /** POS layout: "grid" or "scan". */
+    private String posLayout;
+
     /** Per-company override for maximum allowed absolute cash difference when closing a shift. */
     private BigDecimal shiftMaxDifferenceAbsolute;
 
@@ -60,6 +63,7 @@ public class CompanyResponse {
                 .displayCurrency(c.getDisplayCurrency())
                 .locale(c.getLocale())
                 .posQuickShiftControls(c.getPosQuickShiftControls())
+                .posLayout(c.getPosLayout())
                 .shiftMaxDifferenceAbsolute(c.getShiftMaxDifferenceAbsolute())
                 .shiftMinOpenMinutes(c.getShiftMinOpenMinutes())
                 .shiftMaxOpenHours(c.getShiftMaxOpenHours())

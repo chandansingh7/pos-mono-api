@@ -29,6 +29,7 @@ public class CompanyExport {
     private String displayCurrency;
     private String locale;
     private Boolean posQuickShiftControls;
+    private String posLayout;
     private BigDecimal shiftMaxDifferenceAbsolute;
     private Long shiftMinOpenMinutes;
     private Long shiftMaxOpenHours;

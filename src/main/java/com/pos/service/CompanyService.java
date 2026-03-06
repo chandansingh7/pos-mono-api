@@ -47,6 +47,7 @@ public class CompanyService {
         company.setDisplayCurrency(request.getDisplayCurrency() != null && !request.getDisplayCurrency().isBlank() ? request.getDisplayCurrency().trim() : "USD");
         company.setLocale(request.getLocale() != null && !request.getLocale().isBlank() ? request.getLocale().trim() : "en-US");
         company.setPosQuickShiftControls(request.getPosQuickShiftControls() != null ? request.getPosQuickShiftControls() : Boolean.FALSE);
+        company.setPosLayout(request.getPosLayout() != null && !request.getPosLayout().isBlank() ? request.getPosLayout().trim() : "grid");
         // Shift behaviour rules (company-level overrides with sensible defaults)
         company.setShiftMaxDifferenceAbsolute(
                 request.getShiftMaxDifferenceAbsolute() != null ? request.getShiftMaxDifferenceAbsolute() : BigDecimal.ZERO);
