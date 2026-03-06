@@ -68,7 +68,7 @@ class OrderServiceTest {
         cashier.setId(1L);
         cashier.setUsername("cashier1");
         product = Product.builder().id(10L).name("Widget").price(new BigDecimal("10.00")).active(true).build();
-        inventory = Inventory.builder().id(1L).product(product).quantity(100).lowStockThreshold(5).build();
+        inventory = Inventory.builder().id(1L).product(product).quantity(BigDecimal.valueOf(100)).lowStockThreshold(5).build();
         order = Order.builder()
                 .id(1L)
                 .cashier(cashier)
@@ -109,7 +109,7 @@ class OrderServiceTest {
     void create_validRequest_savesOrderAndItems() {
         OrderItemRequest itemReq = new OrderItemRequest();
         itemReq.setProductId(10L);
-        itemReq.setQuantity(2);
+        itemReq.setQuantity(BigDecimal.valueOf(2));
         OrderRequest request = new OrderRequest();
         request.setItems(List.of(itemReq));
         request.setPaymentMethod(PaymentMethod.CASH);
@@ -132,15 +132,15 @@ class OrderServiceTest {
         assertThat(response).isNotNull();
         verify(orderRepository).save(any(Order.class));
         verify(inventoryRepository).saveAll(any());
-        assertThat(inventory.getQuantity()).isEqualTo(98);
+        assertThat(inventory.getQuantity()).isEqualByComparingTo(BigDecimal.valueOf(98));
     }
 
     @Test
     void create_insufficientStock_throwsBadRequest() {
-        inventory.setQuantity(1);
+        inventory.setQuantity(BigDecimal.ONE);
         OrderItemRequest itemReq = new OrderItemRequest();
         itemReq.setProductId(10L);
-        itemReq.setQuantity(5);
+        itemReq.setQuantity(BigDecimal.valueOf(5));
         OrderRequest request = new OrderRequest();
         request.setItems(List.of(itemReq));
         request.setPaymentMethod(PaymentMethod.CASH);
@@ -158,7 +158,7 @@ class OrderServiceTest {
         Customer customer = Customer.builder().id(1L).name("Jane").rewardPoints(500).build();
         OrderItemRequest itemReq = new OrderItemRequest();
         itemReq.setProductId(10L);
-        itemReq.setQuantity(1);
+        itemReq.setQuantity(BigDecimal.ONE);
         OrderRequest request = new OrderRequest();
         request.setCustomerId(1L);
         request.setItems(List.of(itemReq));
@@ -194,7 +194,7 @@ class OrderServiceTest {
         Customer customer = Customer.builder().id(1L).name("Jane").rewardPoints(50).build();
         OrderItemRequest itemReq = new OrderItemRequest();
         itemReq.setProductId(10L);
-        itemReq.setQuantity(1);
+        itemReq.setQuantity(BigDecimal.ONE);
         OrderRequest request = new OrderRequest();
         request.setCustomerId(1L);
         request.setItems(List.of(itemReq));

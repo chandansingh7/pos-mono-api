@@ -58,6 +58,18 @@ public class Company {
     @Column(length = 10)
     private String locale;
 
+    /** ISO 3166-1 alpha-2 country code (e.g. US, IN, GB). Used to pre-select weight unit. */
+    @Column(name = "country_code", length = 2)
+    private String countryCode;
+
+    /** Weight unit for products/receipts: kg (metric) or lb (imperial). Defaults by country when set. */
+    @Column(name = "weight_unit", length = 4)
+    private String weightUnit;
+
+    /** Default volume unit for products: L (metric) or gal (US gallon). Defaults by country when set. */
+    @Column(name = "volume_unit", length = 6)
+    private String volumeUnit;
+
     /**
      * When true, show quick shift open/close controls directly on the POS / Cashier
      * screen for cashiers (in addition to the Shifts page).

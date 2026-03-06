@@ -51,7 +51,7 @@ class ProductServiceTest {
         sampleInventory = Inventory.builder()
                 .id(1L)
                 .product(sampleProduct)
-                .quantity(50)
+                .quantity(BigDecimal.valueOf(50))
                 .lowStockThreshold(10)
                 .build();
     }
@@ -66,7 +66,7 @@ class ProductServiceTest {
         assertThat(response.getId()).isEqualTo(1L);
         assertThat(response.getName()).isEqualTo("Laptop");
         assertThat(response.getPrice()).isEqualByComparingTo("999.99");
-        assertThat(response.getQuantity()).isEqualTo(50);
+        assertThat(response.getQuantity()).isEqualByComparingTo(BigDecimal.valueOf(50));
     }
 
     @Test

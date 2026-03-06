@@ -84,7 +84,7 @@ class ProductControllerTest {
                 .name("Test")
                 .price(BigDecimal.TEN)
                 .active(true)
-                .quantity(0)
+                .quantity(BigDecimal.ZERO)
                 .build();
         when(productService.getAll(any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(p)));

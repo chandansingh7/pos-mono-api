@@ -189,7 +189,7 @@ public class DataInitializer implements ApplicationRunner {
             inventoryRepository.save(
                 Inventory.builder()
                     .product(products.get(i))
-                    .quantity(qtys[i])
+                    .quantity(java.math.BigDecimal.valueOf(qtys[i]))
                     .lowStockThreshold(thresholds[i])
                     .build()
             );
@@ -303,7 +303,7 @@ public class DataInitializer implements ApplicationRunner {
 
         for (int i = 0; i < productIdxs.length; i++) {
             Product p        = products.get(productIdxs[i]);
-            int     qty      = quantities[i];
+            BigDecimal qty   = BigDecimal.valueOf(quantities[i]);
             BigDecimal unitP = p.getPrice();
             orderItemRepository.save(
                 OrderItem.builder()
@@ -311,7 +311,7 @@ public class DataInitializer implements ApplicationRunner {
                     .product(p)
                     .quantity(qty)
                     .unitPrice(unitP)
-                    .subtotal(unitP.multiply(BigDecimal.valueOf(qty)))
+                    .subtotal(unitP.multiply(qty))
                     .build()
             );
         }

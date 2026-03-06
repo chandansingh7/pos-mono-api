@@ -4,6 +4,7 @@ import com.pos.entity.Inventory;
 import lombok.Builder;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -13,7 +14,7 @@ public class InventoryResponse {
     private Long productId;
     private String productName;
     private String productSku;
-    private int quantity;
+    private BigDecimal quantity;
     private int lowStockThreshold;
     private String stockStatus;
     private LocalDateTime updatedAt;
@@ -21,9 +22,9 @@ public class InventoryResponse {
 
     public static InventoryResponse from(Inventory inv) {
         String status;
-        if (inv.getQuantity() == 0) {
+        if (inv.getQuantity().compareTo(BigDecimal.ZERO) == 0) {
             status = "OUT_OF_STOCK";
-        } else if (inv.getQuantity() <= inv.getLowStockThreshold()) {
+        } else if (inv.getQuantity().compareTo(BigDecimal.valueOf(inv.getLowStockThreshold())) <= 0) {
             status = "LOW_STOCK";
         } else {
             status = "IN_STOCK";

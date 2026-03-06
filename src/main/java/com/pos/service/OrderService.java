@@ -97,21 +97,20 @@ public class OrderService {
             Inventory inventory = inventoryRepository.findByProductId(product.getId())
                     .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.IN001));
 
-            if (inventory.getQuantity() < itemReq.getQuantity()) {
+            if (inventory.getQuantity().compareTo(itemReq.getQuantity()) < 0) {
                 log.warn("[OR002] Insufficient stock for '{}': available {}, requested {}",
                         product.getName(), inventory.getQuantity(), itemReq.getQuantity());
                 throw new BadRequestException(ErrorCode.OR002,
                         product.getName() + " — available: " + inventory.getQuantity());
             }
 
-            BigDecimal itemSubtotal = product.getPrice()
-                    .multiply(BigDecimal.valueOf(itemReq.getQuantity()));
+            BigDecimal itemSubtotal = product.getPrice().multiply(itemReq.getQuantity());
             items.add(OrderItem.builder()
                     .product(product).quantity(itemReq.getQuantity())
                     .unitPrice(product.getPrice()).subtotal(itemSubtotal).build());
 
             subtotal = subtotal.add(itemSubtotal);
-            inventory.setQuantity(inventory.getQuantity() - itemReq.getQuantity());
+            inventory.setQuantity(inventory.getQuantity().subtract(itemReq.getQuantity()));
             inventoriesToSave.add(inventory);
         }
 
@@ -169,7 +168,7 @@ public class OrderService {
 
         for (OrderItem item : order.getItems()) {
             inventoryRepository.findByProductId(item.getProduct().getId()).ifPresent(inv -> {
-                inv.setQuantity(inv.getQuantity() + item.getQuantity());
+                inv.setQuantity(inv.getQuantity().add(item.getQuantity()));
                 inventoryRepository.save(inv);
             });
         }

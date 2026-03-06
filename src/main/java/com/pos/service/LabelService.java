@@ -174,7 +174,7 @@ public class LabelService {
 
         inventoryRepository.save(Inventory.builder()
                 .product(product)
-                .quantity(initialStock)
+                .quantity(java.math.BigDecimal.valueOf(initialStock))
                 .lowStockThreshold(10)
                 .build());
 
@@ -265,9 +265,9 @@ public class LabelService {
     }
 
     private ProductResponse toProductResponse(Product p) {
-        int qty = inventoryRepository.findByProductId(p.getId())
+        java.math.BigDecimal qty = inventoryRepository.findByProductId(p.getId())
                 .map(Inventory::getQuantity)
-                .orElse(0);
+                .orElse(java.math.BigDecimal.ZERO);
         return ProductResponse.builder()
                 .id(p.getId())
                 .name(p.getName())

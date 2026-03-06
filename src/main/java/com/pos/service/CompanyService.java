@@ -46,6 +46,9 @@ public class CompanyService {
         company.setReceiptPaperSize(request.getReceiptPaperSize() != null ? request.getReceiptPaperSize() : "80mm");
         company.setDisplayCurrency(request.getDisplayCurrency() != null && !request.getDisplayCurrency().isBlank() ? request.getDisplayCurrency().trim() : "USD");
         company.setLocale(request.getLocale() != null && !request.getLocale().isBlank() ? request.getLocale().trim() : "en-US");
+        company.setCountryCode(request.getCountryCode() != null && !request.getCountryCode().isBlank() ? request.getCountryCode().trim().toUpperCase() : null);
+        company.setWeightUnit(request.getWeightUnit() != null && !request.getWeightUnit().isBlank() ? request.getWeightUnit().trim().toLowerCase() : null);
+        company.setVolumeUnit(request.getVolumeUnit() != null && !request.getVolumeUnit().isBlank() ? request.getVolumeUnit().trim().toLowerCase() : null);
         company.setPosQuickShiftControls(request.getPosQuickShiftControls() != null ? request.getPosQuickShiftControls() : Boolean.FALSE);
         company.setPosLayout(request.getPosLayout() != null && !request.getPosLayout().isBlank() ? request.getPosLayout().trim() : "grid");
         // Shift behaviour rules (company-level overrides with sensible defaults)

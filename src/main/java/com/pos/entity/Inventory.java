@@ -3,6 +3,7 @@ package com.pos.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -19,8 +20,9 @@ public class Inventory {
     @JoinColumn(name = "product_id", unique = true, nullable = false)
     private Product product;
 
+    @Column(precision = 12, scale = 4)
     @Builder.Default
-    private int quantity = 0;
+    private BigDecimal quantity = BigDecimal.ZERO;
 
     @Builder.Default
     private int lowStockThreshold = 10;

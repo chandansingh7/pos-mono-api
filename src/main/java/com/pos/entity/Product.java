@@ -31,8 +31,23 @@ public class Product {
     /** Optional color variant, e.g. Red, Blue, Black. */
     private String color;
 
+    /** Price per unit (unit given by saleUnit, e.g. per kg, per L, per each). */
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
+
+    /**
+     * How this product is sold: PIECE (each), WEIGHT (mass), VOLUME (liquid).
+     * Determines which units are available in saleUnit.
+     */
+    @Column(name = "sale_unit_type", length = 10)
+    private String saleUnitType;
+
+    /**
+     * Unit for price and quantity: each, kg, g, lb, oz, L, ml, gal, fl_oz.
+     * Must match saleUnitType (piece→each; weight→kg/g/lb/oz; volume→L/ml/gal/fl_oz).
+     */
+    @Column(name = "sale_unit", length = 10)
+    private String saleUnit;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")

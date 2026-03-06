@@ -69,6 +69,8 @@ public class ProductService {
 
         Category category = resolveCategory(request.getCategoryId());
 
+        String unitType = request.getSaleUnitType() != null && !request.getSaleUnitType().isBlank() ? request.getSaleUnitType().trim().toUpperCase() : "PIECE";
+        String unit = request.getSaleUnit() != null && !request.getSaleUnit().isBlank() ? request.getSaleUnit().trim().toLowerCase() : "each";
         Product product = Product.builder()
                 .name(request.getName())
                 .sku(request.getSku())
@@ -76,6 +78,8 @@ public class ProductService {
                 .size(request.getSize())
                 .color(request.getColor())
                 .price(request.getPrice())
+                .saleUnitType(unitType)
+                .saleUnit(unit)
                 .category(category)
                 .imageUrl(request.getImageUrl())
                 .active(request.isActive())
@@ -85,7 +89,7 @@ public class ProductService {
 
         inventoryRepository.save(Inventory.builder()
                 .product(product)
-                .quantity(request.getInitialStock())
+                .quantity(java.math.BigDecimal.valueOf(request.getInitialStock()))
                 .lowStockThreshold(request.getLowStockThreshold())
                 .build());
 
@@ -111,6 +115,12 @@ public class ProductService {
         product.setSize(request.getSize());
         product.setColor(request.getColor());
         product.setPrice(request.getPrice());
+        if (request.getSaleUnitType() != null && !request.getSaleUnitType().isBlank()) {
+            product.setSaleUnitType(request.getSaleUnitType().trim().toUpperCase());
+        }
+        if (request.getSaleUnit() != null && !request.getSaleUnit().isBlank()) {
+            product.setSaleUnit(request.getSaleUnit().trim().toLowerCase());
+        }
         product.setCategory(category);
         if (request.getImageUrl() != null && !request.getImageUrl().isBlank()) {
             product.setImageUrl(request.getImageUrl());
@@ -179,8 +189,8 @@ public class ProductService {
     }
 
     private ProductResponse toResponse(Product product) {
-        int qty = inventoryRepository.findByProductId(product.getId())
-                .map(Inventory::getQuantity).orElse(0);
+        java.math.BigDecimal qty = inventoryRepository.findByProductId(product.getId())
+                .map(Inventory::getQuantity).orElse(java.math.BigDecimal.ZERO);
         return ProductResponse.from(product, qty);
     }
 }

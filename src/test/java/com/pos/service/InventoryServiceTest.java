@@ -19,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,7 +49,7 @@ class InventoryServiceTest {
         inventory = Inventory.builder()
                 .id(1L)
                 .product(product)
-                .quantity(25)
+                .quantity(BigDecimal.valueOf(25))
                 .lowStockThreshold(5)
                 .build();
     }
@@ -60,7 +61,7 @@ class InventoryServiceTest {
                 .thenReturn(new PageImpl<>(List.of(inventory), pageable, 1));
         var result = inventoryService.getAll(pageable);
         assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().get(0).getQuantity()).isEqualTo(25);
+        assertThat(result.getContent().get(0).getQuantity()).isEqualByComparingTo(BigDecimal.valueOf(25));
         assertThat(result.getTotalElements()).isEqualTo(1);
     }
 
@@ -69,7 +70,7 @@ class InventoryServiceTest {
         when(inventoryRepository.findByProductId(1L)).thenReturn(Optional.of(inventory));
         InventoryResponse response = inventoryService.getByProductId(1L);
         assertThat(response).isNotNull();
-        assertThat(response.getQuantity()).isEqualTo(25);
+        assertThat(response.getQuantity()).isEqualByComparingTo(BigDecimal.valueOf(25));
         assertThat(response.getProductId()).isEqualTo(1L);
     }
 
@@ -84,7 +85,7 @@ class InventoryServiceTest {
     void updateStock_productNotFound_throws() {
         when(productRepository.existsById(99L)).thenReturn(false);
         InventoryUpdateRequest request = new InventoryUpdateRequest();
-        request.setQuantity(100);
+        request.setQuantity(BigDecimal.valueOf(100));
         assertThatThrownBy(() -> inventoryService.updateStock(99L, request))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
@@ -95,11 +96,11 @@ class InventoryServiceTest {
         when(inventoryRepository.findByProductId(1L)).thenReturn(Optional.of(inventory));
         when(inventoryRepository.save(any(Inventory.class))).thenAnswer(inv -> inv.getArgument(0));
         InventoryUpdateRequest request = new InventoryUpdateRequest();
-        request.setQuantity(100);
+        request.setQuantity(BigDecimal.valueOf(100));
         request.setLowStockThreshold(10);
         InventoryResponse response = inventoryService.updateStock(1L, request);
         assertThat(response).isNotNull();
-        assertThat(inventory.getQuantity()).isEqualTo(100);
+        assertThat(inventory.getQuantity()).isEqualByComparingTo(BigDecimal.valueOf(100));
         assertThat(inventory.getLowStockThreshold()).isEqualTo(10);
         verify(inventoryRepository).save(inventory);
     }

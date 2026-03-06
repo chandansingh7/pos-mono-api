@@ -28,6 +28,9 @@ public class CompanyExport {
     private String receiptHeaderText;
     private String displayCurrency;
     private String locale;
+    private String countryCode;
+    private String weightUnit;
+    private String volumeUnit;
     private Boolean posQuickShiftControls;
     private String posLayout;
     private BigDecimal shiftMaxDifferenceAbsolute;

@@ -21,12 +21,14 @@ public class ProductResponse {
     private String categoryName;
     private String imageUrl;
     private boolean active;
-    private int quantity;
+    private BigDecimal quantity;
+    private String saleUnitType;
+    private String saleUnit;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String updatedBy;
 
-    public static ProductResponse from(Product p, int quantity) {
+    public static ProductResponse from(Product p, BigDecimal quantity) {
         return ProductResponse.builder()
                 .id(p.getId())
                 .name(p.getName())
@@ -40,6 +42,8 @@ public class ProductResponse {
                 .imageUrl(p.getImageUrl())
                 .active(p.isActive())
                 .quantity(quantity)
+                .saleUnitType(p.getSaleUnitType())
+                .saleUnit(p.getSaleUnit())
                 .createdAt(p.getCreatedAt())
                 .updatedAt(p.getUpdatedAt())
                 .updatedBy(p.getUpdatedBy())

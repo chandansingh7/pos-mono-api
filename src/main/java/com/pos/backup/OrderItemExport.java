@@ -15,7 +15,7 @@ public class OrderItemExport {
     private Long id;
     private Long orderId;
     private Long productId;
-    private int quantity;
+    private BigDecimal quantity;
     private BigDecimal unitPrice;
     private BigDecimal subtotal;
 }

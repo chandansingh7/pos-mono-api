@@ -216,7 +216,7 @@ public class ProductBulkService {
                     RowResult r = createChunk.get(j);
                     newInventories.add(Inventory.builder()
                             .product(saved.get(j))
-                            .quantity(r.initialStock())
+                            .quantity(BigDecimal.valueOf(r.initialStock()))
                             .lowStockThreshold(r.lowStockThreshold())
                             .build());
                 }
@@ -311,12 +311,12 @@ public class ProductBulkService {
                 Optional<Inventory> invOpt = inventoryRepository.findByProductId(existing.getId());
                 Inventory inv = invOpt.orElseGet(() -> Inventory.builder()
                         .product(existing)
-                        .quantity(0)
+                        .quantity(BigDecimal.ZERO)
                         .lowStockThreshold(lowStockThreshold)
                         .updatedBy(updatedBy)
                         .build());
 
-                inv.setQuantity(inv.getQuantity() + initialStock);
+                inv.setQuantity(inv.getQuantity().add(BigDecimal.valueOf(initialStock)));
                 inv.setLowStockThreshold(lowStockThreshold);
                 inv.setUpdatedBy(updatedBy);
 
@@ -415,12 +415,12 @@ public class ProductBulkService {
                 Optional<Inventory> invOpt = inventoryRepository.findByProductId(existing.getId());
                 Inventory inv = invOpt.orElseGet(() -> Inventory.builder()
                         .product(existing)
-                        .quantity(0)
+                        .quantity(BigDecimal.ZERO)
                         .lowStockThreshold(lowStockThreshold)
                         .updatedBy(updatedBy)
                         .build());
 
-                inv.setQuantity(inv.getQuantity() + initialStock);
+                inv.setQuantity(inv.getQuantity().add(BigDecimal.valueOf(initialStock)));
                 inv.setLowStockThreshold(lowStockThreshold);
                 inv.setUpdatedBy(updatedBy);
 

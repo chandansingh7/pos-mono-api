@@ -25,6 +25,12 @@ public class CompanyResponse {
     private String receiptHeaderText;
     private String displayCurrency;
     private String locale;
+    /** ISO country code (e.g. US, IN). Used to pre-select weight unit. */
+    private String countryCode;
+    /** Weight unit: kg or lb. */
+    private String weightUnit;
+    /** Volume unit: L or gal. */
+    private String volumeUnit;
     private LocalDateTime updatedAt;
 
     /** Whether quick shift open/close controls are enabled on the POS screen. */
@@ -62,6 +68,9 @@ public class CompanyResponse {
                 .receiptHeaderText(c.getReceiptHeaderText())
                 .displayCurrency(c.getDisplayCurrency())
                 .locale(c.getLocale())
+                .countryCode(c.getCountryCode())
+                .weightUnit(c.getWeightUnit())
+                .volumeUnit(c.getVolumeUnit())
                 .posQuickShiftControls(c.getPosQuickShiftControls())
                 .posLayout(c.getPosLayout())
                 .shiftMaxDifferenceAbsolute(c.getShiftMaxDifferenceAbsolute())

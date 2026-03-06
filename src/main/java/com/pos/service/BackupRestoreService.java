@@ -104,7 +104,7 @@ public class BackupRestoreService {
                 .id(c.getId()).name(c.getName()).logoUrl(c.getLogoUrl()).faviconUrl(c.getFaviconUrl())
                 .address(c.getAddress()).phone(c.getPhone()).email(c.getEmail()).taxId(c.getTaxId()).website(c.getWebsite())
                 .receiptFooterText(c.getReceiptFooterText()).receiptPaperSize(c.getReceiptPaperSize()).receiptHeaderText(c.getReceiptHeaderText())
-                .displayCurrency(c.getDisplayCurrency()).locale(c.getLocale()).posQuickShiftControls(c.getPosQuickShiftControls())
+                .displayCurrency(c.getDisplayCurrency()).locale(c.getLocale()).countryCode(c.getCountryCode()).weightUnit(c.getWeightUnit()).volumeUnit(c.getVolumeUnit()).posQuickShiftControls(c.getPosQuickShiftControls())
                 .posLayout(c.getPosLayout())
                 .shiftMaxDifferenceAbsolute(c.getShiftMaxDifferenceAbsolute()).shiftMinOpenMinutes(c.getShiftMinOpenMinutes())
                 .shiftMaxOpenHours(c.getShiftMaxOpenHours()).shiftRequireSameDay(c.getShiftRequireSameDay())
@@ -129,7 +129,7 @@ public class BackupRestoreService {
     private ProductExport toProductExport(Product p) {
         return ProductExport.builder()
                 .id(p.getId()).name(p.getName()).sku(p.getSku()).barcode(p.getBarcode()).size(p.getSize()).color(p.getColor())
-                .price(p.getPrice()).categoryId(p.getCategory() != null ? p.getCategory().getId() : null).imageUrl(p.getImageUrl())
+                .price(p.getPrice()).saleUnitType(p.getSaleUnitType()).saleUnit(p.getSaleUnit()).categoryId(p.getCategory() != null ? p.getCategory().getId() : null).imageUrl(p.getImageUrl())
                 .active(p.isActive()).createdAt(p.getCreatedAt()).updatedAt(p.getUpdatedAt())
                 .build();
     }
@@ -237,9 +237,9 @@ public class BackupRestoreService {
     private void insertAllInOrder(JdbcTemplate jdbc, BackupDocument doc) {
         if (doc.getCompany() != null) {
             CompanyExport c = doc.getCompany();
-            jdbc.update("INSERT INTO company (id,name,logo_url,favicon_url,address,phone,email,tax_id,website,receipt_footer_text,receipt_paper_size,receipt_header_text,display_currency,locale,pos_quick_shift_controls,pos_layout,shift_max_difference_abs,shift_min_open_minutes,shift_max_open_hours,shift_require_same_day,updated_at,updated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            jdbc.update("INSERT INTO company (id,name,logo_url,favicon_url,address,phone,email,tax_id,website,receipt_footer_text,receipt_paper_size,receipt_header_text,display_currency,locale,country_code,weight_unit,volume_unit,pos_quick_shift_controls,pos_layout,shift_max_difference_abs,shift_min_open_minutes,shift_max_open_hours,shift_require_same_day,updated_at,updated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     c.getId(), c.getName(), c.getLogoUrl(), c.getFaviconUrl(), c.getAddress(), c.getPhone(), c.getEmail(), c.getTaxId(), c.getWebsite(),
-                    c.getReceiptFooterText(), c.getReceiptPaperSize(), c.getReceiptHeaderText(), c.getDisplayCurrency(), c.getLocale(), c.getPosQuickShiftControls(),
+                    c.getReceiptFooterText(), c.getReceiptPaperSize(), c.getReceiptHeaderText(), c.getDisplayCurrency(), c.getLocale(), c.getCountryCode(), c.getWeightUnit(), c.getVolumeUnit(), c.getPosQuickShiftControls(),
                     c.getPosLayout() != null ? c.getPosLayout() : "grid",
                     c.getShiftMaxDifferenceAbsolute(), c.getShiftMinOpenMinutes(), c.getShiftMaxOpenHours(), c.getShiftRequireSameDay(), c.getUpdatedAt(), c.getUpdatedBy());
         }
@@ -256,8 +256,8 @@ public class BackupRestoreService {
                     e.getId(), e.getName(), e.getEmail(), e.getPhone(), e.getRewardPoints() != null ? e.getRewardPoints() : 0, e.getMemberCardBarcode(), e.getCreatedAt(), e.getUpdatedAt(), e.getUpdatedBy());
         }
         if (doc.getProducts() != null) for (ProductExport e : doc.getProducts()) {
-            jdbc.update("INSERT INTO products (id,name,sku,barcode,size,color,price,category_id,image_url,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                    e.getId(), e.getName(), e.getSku(), e.getBarcode(), e.getSize(), e.getColor(), e.getPrice(), e.getCategoryId(), e.getImageUrl(), e.isActive(), e.getCreatedAt(), e.getUpdatedAt());
+            jdbc.update("INSERT INTO products (id,name,sku,barcode,size,color,price,sale_unit_type,sale_unit,category_id,image_url,active,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    e.getId(), e.getName(), e.getSku(), e.getBarcode(), e.getSize(), e.getColor(), e.getPrice(), e.getSaleUnitType(), e.getSaleUnit(), e.getCategoryId(), e.getImageUrl(), e.isActive(), e.getCreatedAt(), e.getUpdatedAt());
         }
         if (doc.getOrders() != null) for (OrderExport e : doc.getOrders()) {
             jdbc.update("INSERT INTO orders (id,customer_id,cashier_id,subtotal,tax,discount,total,status,payment_method,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",

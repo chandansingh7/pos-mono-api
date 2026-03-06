@@ -56,7 +56,7 @@ public class InventoryService {
         Inventory inventory = inventoryRepository.findByProductId(productId)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.IN001));
 
-        int oldQty = inventory.getQuantity();
+        java.math.BigDecimal oldQty = inventory.getQuantity();
         inventory.setQuantity(request.getQuantity());
         inventory.setLowStockThreshold(request.getLowStockThreshold());
         inventory.setUpdatedBy(currentUsername());

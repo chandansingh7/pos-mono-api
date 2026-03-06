@@ -53,7 +53,7 @@ class ProductBulkServiceTest {
         existingInventory = Inventory.builder()
                 .id(1L)
                 .product(existingProduct)
-                .quantity(50)
+                .quantity(BigDecimal.valueOf(50))
                 .lowStockThreshold(10)
                 .build();
     }
@@ -139,7 +139,7 @@ class ProductBulkServiceTest {
 
         assertThat(result.getSuccessCount()).isEqualTo(0);
         assertThat(result.getUpdatedCount()).isEqualTo(1);
-        assertThat(existingInventory.getQuantity()).isEqualTo(60); // 50 + 10
+        assertThat(existingInventory.getQuantity()).isEqualByComparingTo(BigDecimal.valueOf(60)); // 50 + 10
         verify(productRepository).saveAll(anyList());
         verify(inventoryRepository).saveAll(anyList());
     }
@@ -202,6 +202,6 @@ class ProductBulkServiceTest {
         BulkUploadResult result = productBulkService.processUpload(file, "admin");
 
         assertThat(result.getUpdatedCount()).isEqualTo(1);
-        assertThat(existingInventory.getQuantity()).isEqualTo(70); // 50 + 20
+        assertThat(existingInventory.getQuantity()).isEqualByComparingTo(BigDecimal.valueOf(70)); // 50 + 20
     }
 }

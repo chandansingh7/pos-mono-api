@@ -21,6 +21,8 @@ public class ProductExport {
     private String size;
     private String color;
     private BigDecimal price;
+    private String saleUnitType;
+    private String saleUnit;
     private Long categoryId;
     private String imageUrl;
     private boolean active;

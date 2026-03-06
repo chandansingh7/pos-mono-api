@@ -28,6 +28,12 @@ public class ProductRequest {
     /** Optional color variant, e.g. Red, Blue, Black. */
     private String color;
 
+    /** How product is sold: PIECE, WEIGHT, VOLUME. Default PIECE. */
+    private String saleUnitType;
+
+    /** Unit for price/quantity: each, kg, g, lb, oz, L, ml, gal, fl_oz. Default each. */
+    private String saleUnit;
+
     private boolean active = true;
     private int initialStock = 0;
     private int lowStockThreshold = 10;

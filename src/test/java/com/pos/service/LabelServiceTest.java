@@ -152,7 +152,7 @@ class LabelServiceTest {
                 .build();
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
 
-        Inventory savedInv = Inventory.builder().product(savedProduct).quantity(5).build();
+        Inventory savedInv = Inventory.builder().product(savedProduct).quantity(new BigDecimal("5")).build();
         when(inventoryRepository.save(any(Inventory.class))).thenReturn(savedInv);
         when(inventoryRepository.findByProductId(10L)).thenReturn(Optional.of(savedInv));
 
