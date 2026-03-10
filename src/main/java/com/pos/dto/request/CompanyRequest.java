@@ -79,6 +79,13 @@ public class CompanyRequest {
     private Boolean shiftRequireSameDay;
 
     /**
+     * Label field visibility defaults for printed labels.
+     */
+    private Boolean labelShowName;
+    private Boolean labelShowSku;
+    private Boolean labelShowPrice;
+
+    /**
      * Default label layout template for price labels (A4_2x4, A4_2x5, A4_3x4, CUSTOM).
      * Used by the Labels screen when printing.
      */

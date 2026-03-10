@@ -115,6 +115,18 @@ public class Company {
     private Boolean shiftRequireSameDay;
 
     /**
+     * Label field visibility defaults for printed labels.
+     */
+    @Column(name = "label_show_name")
+    private Boolean labelShowName;
+
+    @Column(name = "label_show_sku")
+    private Boolean labelShowSku;
+
+    @Column(name = "label_show_price")
+    private Boolean labelShowPrice;
+
+    /**
      * Default label layout template for price labels (A4_2x4, A4_2x5, A4_3x4, CUSTOM).
      * Used by the Labels screen when printing.
      */

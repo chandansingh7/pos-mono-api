@@ -60,6 +60,13 @@ public class CompanyService {
                 request.getShiftMaxOpenHours() != null ? request.getShiftMaxOpenHours() : 0L);
         company.setShiftRequireSameDay(
                 request.getShiftRequireSameDay() != null ? request.getShiftRequireSameDay() : Boolean.FALSE);
+        // Label field visibility (defaults)
+        company.setLabelShowName(
+                request.getLabelShowName() != null ? request.getLabelShowName() : Boolean.TRUE);
+        company.setLabelShowSku(
+                request.getLabelShowSku() != null ? request.getLabelShowSku() : Boolean.TRUE);
+        company.setLabelShowPrice(
+                request.getLabelShowPrice() != null ? request.getLabelShowPrice() : Boolean.TRUE);
         // Label layout (used by Labels screen printing)
         company.setLabelTemplateId(
                 request.getLabelTemplateId() != null && !request.getLabelTemplateId().isBlank()
