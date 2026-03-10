@@ -69,6 +69,12 @@ public class CompanyResponse {
     /** Custom layout: label padding (mm) for CUSTOM template. */
     private Integer labelTemplateLabelPaddingMm;
 
+    /** Optional custom page width (mm) for CUSTOM label template. */
+    private Integer labelPageWidthMm;
+
+    /** Optional custom page height (mm) for CUSTOM label template. */
+    private Integer labelPageHeightMm;
+
     public static CompanyResponse from(Company c) {
         if (c == null) return null;
         return CompanyResponse.builder()
@@ -104,6 +110,8 @@ public class CompanyResponse {
                 .labelTemplateGapMm(c.getLabelTemplateGapMm())
                 .labelTemplatePagePaddingMm(c.getLabelTemplatePagePaddingMm())
                 .labelTemplateLabelPaddingMm(c.getLabelTemplateLabelPaddingMm())
+                .labelPageWidthMm(c.getLabelPageWidthMm())
+                .labelPageHeightMm(c.getLabelPageHeightMm())
                 .updatedAt(c.getUpdatedAt())
                 .build();
     }

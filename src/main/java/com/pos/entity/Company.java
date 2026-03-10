@@ -153,6 +153,14 @@ public class Company {
     @Column(name = "label_template_label_padding_mm")
     private Integer labelTemplateLabelPaddingMm;
 
+    /** Optional custom page width (mm) for CUSTOM label template. */
+    @Column(name = "label_page_width_mm")
+    private Integer labelPageWidthMm;
+
+    /** Optional custom page height (mm) for CUSTOM label template. */
+    @Column(name = "label_page_height_mm")
+    private Integer labelPageHeightMm;
+
     private LocalDateTime updatedAt;
 
     private String updatedBy;

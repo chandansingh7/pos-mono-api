@@ -82,6 +82,10 @@ public class CompanyService {
                 request.getLabelTemplatePagePaddingMm() != null ? request.getLabelTemplatePagePaddingMm() : 8);
         company.setLabelTemplateLabelPaddingMm(
                 request.getLabelTemplateLabelPaddingMm() != null ? request.getLabelTemplateLabelPaddingMm() : 4);
+        company.setLabelPageWidthMm(
+                request.getLabelPageWidthMm() != null ? request.getLabelPageWidthMm() : null);
+        company.setLabelPageHeightMm(
+                request.getLabelPageHeightMm() != null ? request.getLabelPageHeightMm() : null);
         company.setUpdatedBy(updatedBy);
         company = companyRepository.save(company);
         log.info("Company settings updated by {}", updatedBy);

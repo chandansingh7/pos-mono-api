@@ -105,4 +105,10 @@ public class CompanyRequest {
 
     /** Custom layout: label padding (mm) for CUSTOM template. */
     private Integer labelTemplateLabelPaddingMm;
+
+    /** Optional custom page width (mm) for CUSTOM label template. */
+    private Integer labelPageWidthMm;
+
+    /** Optional custom page height (mm) for CUSTOM label template. */
+    private Integer labelPageHeightMm;
 }
