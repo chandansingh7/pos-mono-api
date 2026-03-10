@@ -51,6 +51,19 @@ public class CompanyResponse {
     /** Per-company override for requiring same-day shift close. */
     private Boolean shiftRequireSameDay;
 
+    /** Default label layout template for price labels (A4_2x4, A4_2x5, A4_3x4, CUSTOM). */
+    private String labelTemplateId;
+    /** Custom layout: columns for CUSTOM template. */
+    private Integer labelTemplateColumns;
+    /** Custom layout: rows for CUSTOM template. */
+    private Integer labelTemplateRows;
+    /** Custom layout: gap (mm) between labels for CUSTOM template. */
+    private Integer labelTemplateGapMm;
+    /** Custom layout: page padding (mm) for CUSTOM template. */
+    private Integer labelTemplatePagePaddingMm;
+    /** Custom layout: label padding (mm) for CUSTOM template. */
+    private Integer labelTemplateLabelPaddingMm;
+
     public static CompanyResponse from(Company c) {
         if (c == null) return null;
         return CompanyResponse.builder()
@@ -77,6 +90,12 @@ public class CompanyResponse {
                 .shiftMinOpenMinutes(c.getShiftMinOpenMinutes())
                 .shiftMaxOpenHours(c.getShiftMaxOpenHours())
                 .shiftRequireSameDay(c.getShiftRequireSameDay())
+                .labelTemplateId(c.getLabelTemplateId())
+                .labelTemplateColumns(c.getLabelTemplateColumns())
+                .labelTemplateRows(c.getLabelTemplateRows())
+                .labelTemplateGapMm(c.getLabelTemplateGapMm())
+                .labelTemplatePagePaddingMm(c.getLabelTemplatePagePaddingMm())
+                .labelTemplateLabelPaddingMm(c.getLabelTemplateLabelPaddingMm())
                 .updatedAt(c.getUpdatedAt())
                 .build();
     }

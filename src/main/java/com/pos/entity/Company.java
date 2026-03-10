@@ -114,6 +114,33 @@ public class Company {
     @Column(name = "shift_require_same_day")
     private Boolean shiftRequireSameDay;
 
+    /**
+     * Default label layout template for price labels (A4_2x4, A4_2x5, A4_3x4, CUSTOM).
+     * Used by the Labels screen when printing.
+     */
+    @Column(name = "label_template_id", length = 32)
+    private String labelTemplateId;
+
+    /** Custom layout: columns for CUSTOM template. */
+    @Column(name = "label_template_columns")
+    private Integer labelTemplateColumns;
+
+    /** Custom layout: rows for CUSTOM template. */
+    @Column(name = "label_template_rows")
+    private Integer labelTemplateRows;
+
+    /** Custom layout: gap (mm) between labels for CUSTOM template. */
+    @Column(name = "label_template_gap_mm")
+    private Integer labelTemplateGapMm;
+
+    /** Custom layout: page padding (mm) for CUSTOM template. */
+    @Column(name = "label_template_page_padding_mm")
+    private Integer labelTemplatePagePaddingMm;
+
+    /** Custom layout: label padding (mm) for CUSTOM template. */
+    @Column(name = "label_template_label_padding_mm")
+    private Integer labelTemplateLabelPaddingMm;
+
     private LocalDateTime updatedAt;
 
     private String updatedBy;

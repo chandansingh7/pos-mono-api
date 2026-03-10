@@ -60,6 +60,21 @@ public class CompanyService {
                 request.getShiftMaxOpenHours() != null ? request.getShiftMaxOpenHours() : 0L);
         company.setShiftRequireSameDay(
                 request.getShiftRequireSameDay() != null ? request.getShiftRequireSameDay() : Boolean.FALSE);
+        // Label layout (used by Labels screen printing)
+        company.setLabelTemplateId(
+                request.getLabelTemplateId() != null && !request.getLabelTemplateId().isBlank()
+                        ? request.getLabelTemplateId().trim()
+                        : "A4_2x4");
+        company.setLabelTemplateColumns(
+                request.getLabelTemplateColumns() != null ? request.getLabelTemplateColumns() : 2);
+        company.setLabelTemplateRows(
+                request.getLabelTemplateRows() != null ? request.getLabelTemplateRows() : 4);
+        company.setLabelTemplateGapMm(
+                request.getLabelTemplateGapMm() != null ? request.getLabelTemplateGapMm() : 6);
+        company.setLabelTemplatePagePaddingMm(
+                request.getLabelTemplatePagePaddingMm() != null ? request.getLabelTemplatePagePaddingMm() : 8);
+        company.setLabelTemplateLabelPaddingMm(
+                request.getLabelTemplateLabelPaddingMm() != null ? request.getLabelTemplateLabelPaddingMm() : 4);
         company.setUpdatedBy(updatedBy);
         company = companyRepository.save(company);
         log.info("Company settings updated by {}", updatedBy);
