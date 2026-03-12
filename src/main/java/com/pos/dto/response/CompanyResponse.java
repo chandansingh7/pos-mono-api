@@ -18,6 +18,14 @@ public class CompanyResponse {
     private String address;
     private String phone;
     private String email;
+
+    private String smtpProvider;
+    private String smtpHost;
+    private Integer smtpPort;
+    private String smtpUsername;
+    private Boolean smtpStartTls;
+    private LocalDateTime emailVerifiedAt;
+
     private String taxId;
     private String website;
     private String receiptFooterText;
@@ -85,6 +93,12 @@ public class CompanyResponse {
                 .address(c.getAddress())
                 .phone(c.getPhone())
                 .email(c.getEmail())
+                .smtpProvider(c.getSmtpProvider())
+                .smtpHost(c.getSmtpHost())
+                .smtpPort(c.getSmtpPort())
+                .smtpUsername(c.getSmtpUsername())
+                .smtpStartTls(c.getSmtpStartTls())
+                .emailVerifiedAt(c.getEmailVerifiedAt())
                 .taxId(c.getTaxId())
                 .website(c.getWebsite())
                 .receiptFooterText(c.getReceiptFooterText())

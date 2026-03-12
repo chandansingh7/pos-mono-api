@@ -48,4 +48,11 @@ public class OrderController {
     public ResponseEntity<ApiResponse<OrderResponse>> cancel(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok("Order cancelled", orderService.cancel(id)));
     }
+
+    @PostMapping("/{id}/send-receipt")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
+    public ResponseEntity<ApiResponse<Void>> sendReceipt(@PathVariable Long id) {
+        orderService.sendReceiptEmail(id);
+        return ResponseEntity.ok(ApiResponse.ok("Receipt sent to customer email", null));
+    }
 }

@@ -3,15 +3,24 @@ package com.pos.service;
 import com.pos.dto.request.CompanyRequest;
 import com.pos.dto.response.CompanyResponse;
 import com.pos.entity.Company;
+import com.pos.exception.BadRequestException;
+import com.pos.exception.ErrorCode;
 import com.pos.repository.CompanyRepository;
+import com.pos.util.SmtpPasswordEncryption;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Slf4j
 @Service
@@ -20,6 +29,10 @@ public class CompanyService {
 
     private final CompanyRepository companyRepository;
     private final ImageStorageService imageStorageService;
+    private final CompanyMailSenderFactory companyMailSenderFactory;
+
+    @Value("${smtp.encryption.key:}")
+    private String smtpEncryptionKey;
 
     public CompanyResponse get() {
         Company company = companyRepository.findFirstByOrderByIdAsc().orElse(null);
@@ -39,6 +52,9 @@ public class CompanyService {
         company.setAddress(request.getAddress());
         company.setPhone(request.getPhone());
         company.setEmail(request.getEmail());
+        if (hasSmtpRequest(request)) {
+            applySmtpFromRequest(company, request);
+        }
         company.setTaxId(request.getTaxId());
         company.setWebsite(request.getWebsite());
         company.setReceiptFooterText(request.getReceiptFooterText());
@@ -90,6 +106,76 @@ public class CompanyService {
         company = companyRepository.save(company);
         log.info("Company settings updated by {}", updatedBy);
         return CompanyResponse.from(company);
+    }
+
+    private boolean hasSmtpRequest(CompanyRequest request) {
+        return (request.getSmtpProvider() != null && !request.getSmtpProvider().isBlank())
+                || (request.getSmtpHost() != null && !request.getSmtpHost().isBlank())
+                || (request.getSmtpUsername() != null && !request.getSmtpUsername().isBlank());
+    }
+
+    private void applySmtpFromRequest(Company company, CompanyRequest request) {
+        String provider = request.getSmtpProvider() != null ? request.getSmtpProvider().trim().toUpperCase() : null;
+        if ("GMAIL".equals(provider)) {
+            company.setSmtpProvider("GMAIL");
+            company.setSmtpHost("smtp.gmail.com");
+            company.setSmtpPort(587);
+            company.setSmtpStartTls(true);
+        } else if ("OUTLOOK".equals(provider)) {
+            company.setSmtpProvider("OUTLOOK");
+            company.setSmtpHost("smtp.office365.com");
+            company.setSmtpPort(587);
+            company.setSmtpStartTls(true);
+        } else {
+            company.setSmtpProvider(request.getSmtpProvider());
+            company.setSmtpHost(request.getSmtpHost());
+            company.setSmtpPort(request.getSmtpPort() != null ? request.getSmtpPort() : 587);
+            company.setSmtpStartTls(request.getSmtpStartTls() != null ? request.getSmtpStartTls() : true);
+        }
+        company.setSmtpUsername(request.getSmtpUsername());
+        if (request.getSmtpPassword() != null && !request.getSmtpPassword().isBlank()) {
+            if (smtpEncryptionKey == null || smtpEncryptionKey.isBlank()) {
+                log.warn("SMTP_ENCRYPTION_KEY not set; cannot store email password in Settings");
+            } else {
+                String encrypted = SmtpPasswordEncryption.encrypt(request.getSmtpPassword().trim(), smtpEncryptionKey);
+                if (encrypted != null) company.setSmtpPasswordEncrypted(encrypted);
+            }
+        }
+        // Changing SMTP config invalidates verification
+        company.setEmailVerifiedAt(null);
+    }
+
+    @Transactional
+    public CompanyResponse verifyEmail(String updatedBy) {
+        Company company = companyRepository.findFirstByOrderByIdAsc().orElse(null);
+        if (company == null) {
+            throw new BadRequestException(ErrorCode.EM001);
+        }
+        String to = company.getEmail();
+        if (to == null || to.isBlank()) {
+            throw new BadRequestException(ErrorCode.EM001);
+        }
+        JavaMailSender sender = companyMailSenderFactory.createSender(company);
+        if (sender == null) {
+            throw new BadRequestException(ErrorCode.EM003);
+        }
+        try {
+            MimeMessage message = sender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(to);
+            helper.setTo(to);
+            helper.setSubject("CicdPOS – Email setup verified");
+            helper.setText("Your email (receipt) setup is working. You can send order receipts from the Orders page.", false);
+            sender.send(message);
+            company.setEmailVerifiedAt(LocalDateTime.now());
+            company.setUpdatedBy(updatedBy);
+            company = companyRepository.save(company);
+            log.info("Email verified for company by {}", updatedBy);
+            return CompanyResponse.from(company);
+        } catch (MessagingException e) {
+            log.warn("Email verification failed: {}", e.getMessage());
+            throw new BadRequestException(ErrorCode.EM003);
+        }
     }
 
     @Transactional

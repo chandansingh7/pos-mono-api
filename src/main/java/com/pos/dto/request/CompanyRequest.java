@@ -16,6 +16,16 @@ public class CompanyRequest {
     private String address;
     private String phone;
     private String email;
+
+    /** SMTP provider: GMAIL, OUTLOOK, or CUSTOM. Host/port are auto-filled for GMAIL/OUTLOOK. */
+    private String smtpProvider;
+    private String smtpHost;
+    private Integer smtpPort;
+    private String smtpUsername;
+    /** Plain SMTP password (only sent when saving; never returned). Stored encrypted. */
+    private String smtpPassword;
+    private Boolean smtpStartTls;
+
     private String taxId;
     private String website;
     private String receiptFooterText;

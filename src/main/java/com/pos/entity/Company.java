@@ -36,6 +36,30 @@ public class Company {
 
     private String email;
 
+    /** SMTP provider preset: GMAIL, OUTLOOK, or CUSTOM. When set, host/port are pre-filled for GMAIL/OUTLOOK. */
+    @Column(name = "smtp_provider", length = 20)
+    private String smtpProvider;
+
+    @Column(name = "smtp_host", length = 255)
+    private String smtpHost;
+
+    @Column(name = "smtp_port")
+    private Integer smtpPort;
+
+    @Column(name = "smtp_username", length = 255)
+    private String smtpUsername;
+
+    /** Encrypted SMTP password (AES-GCM); decrypted at runtime using SMTP_ENCRYPTION_KEY. */
+    @Column(name = "smtp_password_encrypted", columnDefinition = "TEXT")
+    private String smtpPasswordEncrypted;
+
+    @Column(name = "smtp_start_tls")
+    private Boolean smtpStartTls;
+
+    /** Set when SMTP was last successfully verified (test email sent). */
+    @Column(name = "email_verified_at")
+    private LocalDateTime emailVerifiedAt;
+
     private String taxId;
 
     private String website;

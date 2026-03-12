@@ -63,4 +63,11 @@ public class CompanyController {
                     .body(ApiResponse.<CompanyResponse>error("Favicon upload failed: " + e.getMessage()));
         }
     }
+
+    @PostMapping("/verify-email")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<ApiResponse<CompanyResponse>> verifyEmail(Authentication auth) {
+        String username = auth != null ? auth.getName() : "system";
+        return ResponseEntity.ok(ApiResponse.ok("Email setup verified", companyService.verifyEmail(username)));
+    }
 }

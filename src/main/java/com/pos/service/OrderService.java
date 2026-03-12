@@ -31,14 +31,16 @@ public class OrderService {
 
     private static final BigDecimal TAX_RATE = new BigDecimal("0.10");
 
-    private final OrderRepository     orderRepository;
-    private final OrderItemRepository orderItemRepository;
-    private final ProductRepository   productRepository;
-    private final InventoryRepository inventoryRepository;
+    private final OrderRepository       orderRepository;
+    private final OrderItemRepository  orderItemRepository;
+    private final ProductRepository    productRepository;
+    private final InventoryRepository  inventoryRepository;
     private final CustomerRepository  customerRepository;
     private final UserRepository      userRepository;
     private final PaymentRepository   paymentRepository;
+    private final CompanyRepository   companyRepository;
     private final RewardConfig        rewardConfig;
+    private final ReceiptEmailService receiptEmailService;
 
     public Page<OrderResponse> getAll(Pageable pageable) {
         log.debug("Fetching orders — page: {}", pageable.getPageNumber());
@@ -193,6 +195,22 @@ public class OrderService {
                 orderRepository.countByStatus(com.pos.enums.OrderStatus.REFUNDED),
                 orderRepository.sumCompletedRevenue()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public void sendReceiptEmail(Long orderId) {
+        log.info("Sending receipt email for order id: {}", orderId);
+        Order order = findById(orderId);
+        if (order.getCustomer() == null) {
+            throw new BadRequestException(ErrorCode.OR005);
+        }
+        String email = order.getCustomer().getEmail();
+        if (email == null || email.trim().isBlank()) {
+            throw new BadRequestException(ErrorCode.OR005);
+        }
+        Company company = companyRepository.findFirstByOrderByIdAsc()
+                .orElseThrow(() -> new BadRequestException(ErrorCode.EM001));
+        receiptEmailService.sendReceipt(company, email.trim(), order);
     }
 
     private Order findById(Long id) {

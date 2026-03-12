@@ -57,6 +57,12 @@ public enum ErrorCode {
     OR002("OR002", "Insufficient stock"),
     OR003("OR003", "Order is already cancelled"),
     OR004("OR004", "Cannot cancel a refunded order"),
+    OR005("OR005", "Customer has no email address; cannot send receipt"),
+
+    // ── Email (receipt) ───────────────────────────────────────────────────────
+    EM001("EM001", "Company email is not set in Settings; cannot send receipt"),
+    EM002("EM002", "Email (SMTP) is not configured; contact administrator"),
+    EM003("EM003", "Email verification failed; check SMTP settings and app password (use App Password if you have 2FA)"),
 
     // ── Inventory ─────────────────────────────────────────────────────────────
     IN001("IN001", "Inventory record not found for this product"),
