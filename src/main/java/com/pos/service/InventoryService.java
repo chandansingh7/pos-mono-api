@@ -26,8 +26,11 @@ public class InventoryService {
     private final InventoryRepository inventoryRepository;
     private final ProductRepository   productRepository;
 
-    public Page<InventoryResponse> getAll(Pageable pageable) {
-        log.debug("Fetching inventory page: {}", pageable);
+    public Page<InventoryResponse> getAll(String search, Pageable pageable) {
+        log.debug("Fetching inventory — search: '{}', page: {}", search, pageable.getPageNumber());
+        if (search != null && !search.isBlank()) {
+            return inventoryRepository.findAllWithProductSearch(search.trim(), pageable).map(InventoryResponse::from);
+        }
         return inventoryRepository.findAllWithProduct(pageable).map(InventoryResponse::from);
     }
 

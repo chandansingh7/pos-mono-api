@@ -23,8 +23,10 @@ public class InventoryController {
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
-    public ResponseEntity<ApiResponse<Page<InventoryResponse>>> getAll(Pageable pageable) {
-        return ResponseEntity.ok(ApiResponse.ok(inventoryService.getAll(pageable)));
+    public ResponseEntity<ApiResponse<Page<InventoryResponse>>> getAll(
+            @RequestParam(required = false) String search,
+            Pageable pageable) {
+        return ResponseEntity.ok(ApiResponse.ok(inventoryService.getAll(search, pageable)));
     }
 
     @GetMapping("/stats")

@@ -37,13 +37,22 @@ public class CustomerService {
 
     public CustomerResponse create(CustomerRequest request) {
         log.info("Creating customer — name: '{}'", request.getName());
-        if (request.getEmail() != null && customerRepository.existsByEmail(request.getEmail())) {
-            log.warn("[CM002] Customer email already registered: {}", request.getEmail());
+
+        String email = request.getEmail();
+        if (email != null) {
+            email = email.trim();
+            if (email.isBlank()) {
+                email = null;
+            }
+        }
+
+        if (email != null && customerRepository.existsByEmail(email)) {
+            log.warn("[CM002] Customer email already registered: {}", email);
             throw new BadRequestException(ErrorCode.CM002);
         }
         Customer customer = Customer.builder()
                 .name(request.getName())
-                .email(request.getEmail())
+                .email(email)
                 .phone(request.getPhone())
                 .updatedBy(currentUsername())
                 .build();
@@ -55,16 +64,26 @@ public class CustomerService {
     public CustomerResponse update(Long id, CustomerRequest request) {
         log.info("Updating customer id: {}", id);
         Customer customer = findById(id);
-        if (request.getEmail() != null && !request.getEmail().equals(customer.getEmail())) {
-            customerRepository.findByEmail(request.getEmail()).ifPresent(existing -> {
+
+        String newEmail = request.getEmail();
+        if (newEmail != null) {
+            newEmail = newEmail.trim();
+            if (newEmail.isBlank()) {
+                newEmail = null;
+            }
+        }
+
+        final String emailToCheck = newEmail;
+        if (newEmail != null && !newEmail.equals(customer.getEmail())) {
+            customerRepository.findByEmail(newEmail).ifPresent(existing -> {
                 if (!existing.getId().equals(id)) {
-                    log.warn("[CM002] Customer email in use: {}", request.getEmail());
+                    log.warn("[CM002] Customer email in use: {}", emailToCheck);
                     throw new BadRequestException(ErrorCode.CM002);
                 }
             });
         }
         customer.setName(request.getName());
-        customer.setEmail(request.getEmail());
+        customer.setEmail(newEmail);
         customer.setPhone(request.getPhone());
         customer.setUpdatedBy(currentUsername());
         log.info("Customer updated — id: {}", id);

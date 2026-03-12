@@ -59,7 +59,7 @@ class InventoryServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         when(inventoryRepository.findAllWithProduct(any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(inventory), pageable, 1));
-        var result = inventoryService.getAll(pageable);
+        var result = inventoryService.getAll(null, pageable);
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getQuantity()).isEqualByComparingTo(BigDecimal.valueOf(25));
         assertThat(result.getTotalElements()).isEqualTo(1);
