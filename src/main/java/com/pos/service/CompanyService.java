@@ -269,6 +269,23 @@ public class CompanyService {
     }
 
     @Transactional
+    public CompanyResponse disconnectMicrosoft(String updatedBy) {
+        Company company = companyRepository.findFirstByOrderByIdAsc().orElse(null);
+        if (company == null) {
+            throw new BadRequestException(ErrorCode.EM001);
+        }
+        company.setMsRefreshTokenEncrypted(null);
+        company.setMsAccountEmail(null);
+        company.setMsConnectedAt(null);
+        if ("MICROSOFT".equalsIgnoreCase(company.getEmailSendMethod())) {
+            company.setEmailSendMethod("SMTP");
+        }
+        company.setUpdatedBy(updatedBy);
+        company = companyRepository.save(company);
+        return CompanyResponse.from(company);
+    }
+
+    @Transactional
     public CompanyResponse uploadLogo(MultipartFile file, String updatedBy) throws IOException {
         Company company = companyRepository.findFirstByOrderByIdAsc().orElseGet(() -> {
             Company newCompany = new Company();

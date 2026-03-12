@@ -84,4 +84,11 @@ public class CompanyController {
         String username = auth != null ? auth.getName() : "system";
         return ResponseEntity.ok(ApiResponse.ok("Microsoft connected", companyService.connectMicrosoft(code, username)));
     }
+
+    @PostMapping("/microsoft/disconnect")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<ApiResponse<CompanyResponse>> microsoftDisconnect(Authentication auth) {
+        String username = auth != null ? auth.getName() : "system";
+        return ResponseEntity.ok(ApiResponse.ok("Microsoft disconnected", companyService.disconnectMicrosoft(username)));
+    }
 }
