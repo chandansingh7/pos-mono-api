@@ -26,6 +26,10 @@ public class CompanyResponse {
     private Boolean smtpStartTls;
     private LocalDateTime emailVerifiedAt;
 
+    private String emailSendMethod;
+    private String msAccountEmail;
+    private LocalDateTime msConnectedAt;
+
     private String taxId;
     private String website;
     private String receiptFooterText;
@@ -99,6 +103,9 @@ public class CompanyResponse {
                 .smtpUsername(c.getSmtpUsername())
                 .smtpStartTls(c.getSmtpStartTls())
                 .emailVerifiedAt(c.getEmailVerifiedAt())
+                .emailSendMethod(c.getEmailSendMethod())
+                .msAccountEmail(c.getMsAccountEmail())
+                .msConnectedAt(c.getMsConnectedAt())
                 .taxId(c.getTaxId())
                 .website(c.getWebsite())
                 .receiptFooterText(c.getReceiptFooterText())

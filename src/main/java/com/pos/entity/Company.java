@@ -60,6 +60,25 @@ public class Company {
     @Column(name = "email_verified_at")
     private LocalDateTime emailVerifiedAt;
 
+    /**
+     * Email sending method for receipts: SMTP or MICROSOFT (OAuth + Graph).
+     * Defaults to SMTP.
+     */
+    @Column(name = "email_send_method", length = 20)
+    private String emailSendMethod;
+
+    /** Microsoft Graph delegated refresh token (encrypted). */
+    @Column(name = "ms_refresh_token_encrypted", columnDefinition = "TEXT")
+    private String msRefreshTokenEncrypted;
+
+    /** Microsoft account email that is connected (for display/status). */
+    @Column(name = "ms_account_email", length = 255)
+    private String msAccountEmail;
+
+    /** Set when Microsoft connection was last verified (Graph test email sent). */
+    @Column(name = "ms_connected_at")
+    private LocalDateTime msConnectedAt;
+
     private String taxId;
 
     private String website;

@@ -7,12 +7,39 @@ Order receipts are sent from the **Company email** (configured in the app under 
 1. In the POS app go to **Settings**.
 2. Set **Company email** (in “Company details”) to the address that should appear as “From” on receipts.
 3. In the **Email (receipts)** card:
-   - Choose **Provider**: Gmail, Microsoft Outlook, or Custom SMTP.
+   - Choose **Method**: **SMTP** or **Microsoft sign-in**.
+   - If you choose **Microsoft sign-in**:
+     - Click **Connect Microsoft** (login popup).
+     - Save, then click **Verify setup**.
+     - Requires Azure app registration (see below).
+   - If you choose **SMTP**: choose **Provider**: Gmail, Microsoft Outlook, or Custom SMTP.
    - For **Gmail** or **Outlook**: host and port are pre-filled; enter your email and **App password** (if you use 2-step verification / 2FA, create an App Password in your Google or Microsoft account and use that instead of your normal password).
    - For **Custom**: enter SMTP host, port, email, and password.
 4. Click **Save**, then **Verify setup**. A test email is sent to your company email; when it succeeds, a green tick and “Email is set up” are shown.
 
 **Server requirement:** To store the email password in the app, set the environment variable `SMTP_ENCRYPTION_KEY` (base64-encoded 16-byte key) so the API can encrypt it. Generate a key with: `openssl rand -base64 16`.
+
+### Microsoft sign-in (Azure app registration)
+
+1. In Azure Portal → **Microsoft Entra ID** → **App registrations** → **New registration**.
+2. Supported account types:
+   - For a single organisation: **Single tenant**
+   - For any Microsoft account: **Multitenant + personal** (optional)
+3. Add a **Redirect URI** (type: *Web*) pointing to your UI Settings page, e.g.:
+   - `https://<your-ui-domain>/app/settings`
+4. In the app registration:
+   - **API permissions** → add **Microsoft Graph** delegated permissions:
+     - `Mail.Send`
+     - `User.Read`
+     - `offline_access`
+   - **Grant admin consent** if required in your tenant.
+5. **Certificates & secrets** → create a **Client secret**.
+6. Set these environment variables on the API server:
+   - `MS_OAUTH_CLIENT_ID`
+   - `MS_OAUTH_CLIENT_SECRET`
+   - `MS_OAUTH_TENANT` (or `common`)
+   - `MS_OAUTH_REDIRECT_URI` (must exactly match the Redirect URI above)
+   - `SMTP_ENCRYPTION_KEY` (used to encrypt the Microsoft refresh token in DB)
 
 ## Option 2: Configure via environment variables
 

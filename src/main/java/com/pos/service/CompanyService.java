@@ -12,6 +12,7 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -30,13 +31,23 @@ public class CompanyService {
     private final CompanyRepository companyRepository;
     private final ImageStorageService imageStorageService;
     private final CompanyMailSenderFactory companyMailSenderFactory;
+    private final ObjectProvider<JavaMailSender> mailSenderProvider;
+    private final MicrosoftOAuthService microsoftOAuthService;
+    private final MicrosoftGraphMailService microsoftGraphMailService;
 
     @Value("${smtp.encryption.key:}")
     private String smtpEncryptionKey;
 
+    @Value("${spring.mail.host:}")
+    private String mailHost;
+
     public CompanyResponse get() {
         Company company = companyRepository.findFirstByOrderByIdAsc().orElse(null);
         return CompanyResponse.from(company);
+    }
+
+    public String getMicrosoftAuthUrl(String state) {
+        return microsoftOAuthService.buildAuthorizeUrl(state);
     }
 
     @Transactional
@@ -55,6 +66,7 @@ public class CompanyService {
         if (hasSmtpRequest(request)) {
             applySmtpFromRequest(company, request);
         }
+        applyEmailSendMethod(company, request);
         company.setTaxId(request.getTaxId());
         company.setWebsite(request.getWebsite());
         company.setReceiptFooterText(request.getReceiptFooterText());
@@ -145,6 +157,13 @@ public class CompanyService {
         company.setEmailVerifiedAt(null);
     }
 
+    private void applyEmailSendMethod(Company company, CompanyRequest request) {
+        String method = request.getEmailSendMethod() != null ? request.getEmailSendMethod().trim().toUpperCase() : null;
+        if (method == null || method.isBlank()) return;
+        if (!"SMTP".equals(method) && !"MICROSOFT".equals(method)) return;
+        company.setEmailSendMethod(method);
+    }
+
     @Transactional
     public CompanyResponse verifyEmail(String updatedBy) {
         Company company = companyRepository.findFirstByOrderByIdAsc().orElse(null);
@@ -155,9 +174,22 @@ public class CompanyService {
         if (to == null || to.isBlank()) {
             throw new BadRequestException(ErrorCode.EM001);
         }
+
+        // If Microsoft method is selected and connected, verify by sending via Graph.
+        if ("MICROSOFT".equalsIgnoreCase(company.getEmailSendMethod()) && company.getMsRefreshTokenEncrypted() != null && !company.getMsRefreshTokenEncrypted().isBlank()) {
+            verifyMicrosoftEmail(company, to, updatedBy);
+            company = companyRepository.save(company);
+            return CompanyResponse.from(company);
+        }
+
         JavaMailSender sender = companyMailSenderFactory.createSender(company);
         if (sender == null) {
-            throw new BadRequestException(ErrorCode.EM003);
+            // Allow verification using env-based SMTP (spring.mail.*) so users can start with minimal setup.
+            JavaMailSender fallback = mailSenderProvider.getIfAvailable();
+            if (fallback == null || mailHost == null || mailHost.isBlank()) {
+                throw new BadRequestException(ErrorCode.EM002);
+            }
+            sender = fallback;
         }
         try {
             MimeMessage message = sender.createMimeMessage();
@@ -174,6 +206,64 @@ public class CompanyService {
             return CompanyResponse.from(company);
         } catch (MessagingException e) {
             log.warn("Email verification failed: {}", e.getMessage());
+            throw new BadRequestException(ErrorCode.EM003);
+        }
+    }
+
+    private void verifyMicrosoftEmail(Company company, String to, String updatedBy) {
+        if (smtpEncryptionKey == null || smtpEncryptionKey.isBlank()) {
+            throw new BadRequestException(ErrorCode.EM003);
+        }
+        String refresh = SmtpPasswordEncryption.decrypt(company.getMsRefreshTokenEncrypted(), smtpEncryptionKey);
+        if (refresh == null || refresh.isBlank()) {
+            throw new BadRequestException(ErrorCode.EM003);
+        }
+        try {
+            MicrosoftOAuthService.TokenResponse tok = microsoftOAuthService.refreshAccessToken(refresh);
+            if (tok.refreshToken() != null && !tok.refreshToken().isBlank()) {
+                String enc = SmtpPasswordEncryption.encrypt(tok.refreshToken(), smtpEncryptionKey);
+                if (enc != null) company.setMsRefreshTokenEncrypted(enc);
+            }
+            String me = microsoftGraphMailService.getMeEmail(tok.accessToken());
+            company.setMsAccountEmail(me);
+            microsoftGraphMailService.sendMail(tok.accessToken(), me, to, "CicdPOS – Email setup verified", "Your Microsoft email setup is working. You can send order receipts from the Orders page.");
+            company.setMsConnectedAt(LocalDateTime.now());
+            company.setUpdatedBy(updatedBy);
+        } catch (Exception e) {
+            log.warn("Microsoft email verification failed: {}", e.getMessage());
+            throw new BadRequestException(ErrorCode.EM003);
+        }
+    }
+
+    @Transactional
+    public CompanyResponse connectMicrosoft(String code, String updatedBy) {
+        Company company = companyRepository.findFirstByOrderByIdAsc().orElseGet(() -> {
+            Company c = new Company();
+            c.setName("My Store");
+            return companyRepository.save(c);
+        });
+        if (smtpEncryptionKey == null || smtpEncryptionKey.isBlank()) {
+            throw new BadRequestException(ErrorCode.EM003);
+        }
+        try {
+            MicrosoftOAuthService.TokenResponse tok = microsoftOAuthService.exchangeCodeForTokens(code);
+            if (tok.refreshToken() == null || tok.refreshToken().isBlank()) {
+                throw new BadRequestException(ErrorCode.EM003);
+            }
+            String enc = SmtpPasswordEncryption.encrypt(tok.refreshToken(), smtpEncryptionKey);
+            if (enc == null) throw new BadRequestException(ErrorCode.EM003);
+            company.setMsRefreshTokenEncrypted(enc);
+            String me = tok.accessToken() != null && !tok.accessToken().isBlank() ? microsoftGraphMailService.getMeEmail(tok.accessToken()) : null;
+            company.setMsAccountEmail(me);
+            company.setMsConnectedAt(LocalDateTime.now());
+            company.setEmailSendMethod("MICROSOFT");
+            company.setUpdatedBy(updatedBy);
+            company = companyRepository.save(company);
+            return CompanyResponse.from(company);
+        } catch (BadRequestException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("Microsoft connect failed: {}", e.getMessage());
             throw new BadRequestException(ErrorCode.EM003);
         }
     }

@@ -4,6 +4,7 @@ import com.pos.entity.Company;
 import com.pos.entity.Order;
 import com.pos.exception.BadRequestException;
 import com.pos.exception.ErrorCode;
+import com.pos.util.SmtpPasswordEncryption;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,9 +30,14 @@ public class ReceiptEmailService {
 
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
     private final CompanyMailSenderFactory companyMailSenderFactory;
+    private final MicrosoftOAuthService microsoftOAuthService;
+    private final MicrosoftGraphMailService microsoftGraphMailService;
 
     @Value("${spring.mail.host:}")
     private String mailHost;
+
+    @Value("${smtp.encryption.key:}")
+    private String encryptionKey;
 
     public void sendReceipt(Company company, String toEmail, Order order) {
         String from = company.getEmail();
@@ -39,6 +45,13 @@ public class ReceiptEmailService {
             log.warn("[EM001] Company email not set");
             throw new BadRequestException(ErrorCode.EM001);
         }
+
+        // Microsoft Graph flow (optional)
+        if ("MICROSOFT".equalsIgnoreCase(company.getEmailSendMethod()) && company.getMsRefreshTokenEncrypted() != null && !company.getMsRefreshTokenEncrypted().isBlank()) {
+            sendReceiptViaMicrosoft(company, toEmail, order, from);
+            return;
+        }
+
         JavaMailSender sender = companyMailSenderFactory.createSender(company);
         if (sender == null) {
             JavaMailSender fallback = mailSenderProvider.getIfAvailable();
@@ -65,6 +78,32 @@ public class ReceiptEmailService {
             log.error("Failed to send receipt email for order {}: {}", order.getId(), e.getMessage());
             throw new BadRequestException(ErrorCode.EM002);
         }
+    }
+
+    private void sendReceiptViaMicrosoft(Company company, String toEmail, Order order, String from) {
+        if (encryptionKey == null || encryptionKey.isBlank()) {
+            throw new BadRequestException(ErrorCode.EM002);
+        }
+        String refresh = SmtpPasswordEncryption.decrypt(company.getMsRefreshTokenEncrypted(), encryptionKey);
+        if (refresh == null || refresh.isBlank()) {
+            throw new BadRequestException(ErrorCode.EM002);
+        }
+        try {
+            MicrosoftOAuthService.TokenResponse tok = microsoftOAuthService.refreshAccessToken(refresh);
+            String subject = "Receipt #" + order.getId() + " - " + (company.getName() != null ? company.getName() : "Your purchase");
+            String body = buildReceiptHtml(company, order);
+            // Graph implementation currently sends Text; keep it simple.
+            microsoftGraphMailService.sendMail(tok.accessToken(), from, toEmail, subject, stripHtml(body));
+            log.info("Receipt email (Microsoft) sent for order {} to {}", order.getId(), toEmail);
+        } catch (Exception e) {
+            log.warn("Failed to send receipt via Microsoft: {}", e.getMessage());
+            throw new BadRequestException(ErrorCode.EM002);
+        }
+    }
+
+    private static String stripHtml(String html) {
+        if (html == null) return "";
+        return html.replaceAll("<[^>]*>", " ").replaceAll("\\s+", " ").trim();
     }
 
     private String buildReceiptHtml(Company company, Order order) {

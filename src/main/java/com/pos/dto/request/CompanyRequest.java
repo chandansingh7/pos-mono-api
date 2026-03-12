@@ -26,6 +26,9 @@ public class CompanyRequest {
     private String smtpPassword;
     private Boolean smtpStartTls;
 
+    /** Email send method: SMTP or MICROSOFT. */
+    private String emailSendMethod;
+
     private String taxId;
     private String website;
     private String receiptFooterText;
