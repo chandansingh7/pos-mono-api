@@ -17,6 +17,7 @@ public class OrderResponse {
     private Long id;
     private Long customerId;
     private String customerName;
+    private String customerEmail;
     private String cashierUsername;
     private List<OrderItemResponse> items;
     private BigDecimal subtotal;
@@ -32,6 +33,7 @@ public class OrderResponse {
                 .id(order.getId())
                 .customerId(order.getCustomer() != null ? order.getCustomer().getId() : null)
                 .customerName(order.getCustomer() != null ? order.getCustomer().getName() : "Walk-in")
+                .customerEmail(order.getCustomer() != null ? order.getCustomer().getEmail() : null)
                 .cashierUsername(order.getCashier().getUsername())
                 .items(order.getItems().stream().map(OrderItemResponse::from).collect(Collectors.toList()))
                 .subtotal(order.getSubtotal())
