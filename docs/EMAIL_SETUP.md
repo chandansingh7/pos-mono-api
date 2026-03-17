@@ -21,12 +21,15 @@ Order receipts are sent from the **Company email** (configured in the app under 
 
 ### Microsoft sign-in (Azure app registration)
 
+The flow uses a **backend callback**: Microsoft redirects to the API; the API exchanges the code and then redirects the browser to a small frontend “Connected” page that closes the popup.
+
 1. In Azure Portal → **Microsoft Entra ID** → **App registrations** → **New registration**.
 2. Supported account types:
    - For a single organisation: **Single tenant**
    - For any Microsoft account: **Multitenant + personal** (optional)
-3. Add a **Redirect URI** (type: *Web*) pointing to your UI Settings page, e.g.:
-   - `https://<your-ui-domain>/app/settings`
+3. Add a **Redirect URI** (type: **Web**) pointing to your **API** callback URL, e.g.:
+   - `https://<your-api-domain>/api/company/microsoft/callback`
+   - Local: `http://localhost:8080/api/company/microsoft/callback`
 4. In the app registration:
    - **API permissions** → add **Microsoft Graph** delegated permissions:
      - `Mail.Send`
@@ -38,7 +41,8 @@ Order receipts are sent from the **Company email** (configured in the app under 
    - `MS_OAUTH_CLIENT_ID`
    - `MS_OAUTH_CLIENT_SECRET`
    - `MS_OAUTH_TENANT` (or `common`)
-   - `MS_OAUTH_REDIRECT_URI` (must exactly match the Redirect URI above)
+   - `MS_OAUTH_REDIRECT_URI` — must exactly match the **backend** Redirect URI (e.g. `https://<api>/api/company/microsoft/callback`)
+   - `MS_OAUTH_FRONTEND_SUCCESS_URL` — URL of the frontend “success” page (e.g. `https://<your-ui-domain>/auth/microsoft-callback`). The API redirects the user here after a successful connect so the popup shows “Connected — no need to verify again” and closes.
    - `SMTP_ENCRYPTION_KEY` (used to encrypt the Microsoft refresh token in DB)
 
 ## Option 2: Configure via environment variables
