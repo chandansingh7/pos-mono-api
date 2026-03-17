@@ -54,11 +54,15 @@ public class MicrosoftGraphMailService {
             HttpResponse<String> resp = HttpClient.newHttpClient().send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
                 String wwwAuth = resp.headers().firstValue("WWW-Authenticate").orElse("");
+                String responseBody = truncate(resp.body());
                 log.warn("Graph sendMail failed: status={} wwwAuth={} body={} from={} to={}",
-                        resp.statusCode(), truncate(wwwAuth), truncate(resp.body()), fromEmail, toEmail);
-                throw new IllegalStateException("Graph sendMail failed");
+                        resp.statusCode(), truncate(wwwAuth), responseBody, fromEmail, toEmail);
+                // Extract the Graph error code/message for a more actionable exception message
+                String graphError = extractGraphError(resp.body());
+                throw new IllegalStateException("Graph sendMail HTTP " + resp.statusCode() + ": " + graphError);
             }
         } catch (Exception e) {
+            if (e instanceof IllegalStateException) throw e;
             throw new IllegalStateException("Graph sendMail failed: " + e.getMessage(), e);
         }
     }
@@ -81,8 +85,29 @@ public class MicrosoftGraphMailService {
             if (mail != null && !mail.isBlank()) return mail;
             return json.path("userPrincipalName").asText(null);
         } catch (Exception e) {
+            if (e instanceof IllegalStateException) throw e;
             throw new IllegalStateException("Graph /me failed: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Extracts a human-readable error from a Graph API JSON error response.
+     * Example body: {"error":{"code":"ErrorAccessDenied","message":"Access is denied..."}}
+     */
+    private String extractGraphError(String body) {
+        if (body == null || body.isBlank()) return "empty response";
+        try {
+            var json = MAPPER.readTree(body);
+            var error = json.path("error");
+            String code = error.path("code").asText(null);
+            String message = error.path("message").asText(null);
+            if (code != null && message != null) return code + ": " + message;
+            if (code != null) return code;
+            if (message != null) return message;
+        } catch (Exception ignored) {
+            // body is not JSON (e.g. HTML auth redirect); return truncated raw body
+        }
+        return truncate(body);
     }
 
     private static String truncate(String s) {

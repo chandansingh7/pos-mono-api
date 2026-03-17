@@ -94,14 +94,16 @@ public class ReceiptEmailService {
             MicrosoftOAuthService.TokenResponse tok = microsoftOAuthService.refreshAccessToken(refresh);
             String subject = "Receipt #" + order.getId() + " - " + (company.getName() != null ? company.getName() : "Your purchase");
             String body = buildReceiptHtml(company, order);
-            // Graph implementation currently sends Text; keep it simple.
             log.info("sendReceiptViaMicrosoft: attempting Graph sendMail from={} to={} orderId={}", from, toEmail, order.getId());
             microsoftGraphMailService.sendMail(tok.accessToken(), from, toEmail, subject, stripHtml(body));
             log.info("Receipt email (Microsoft) sent for order {} to {}", order.getId(), toEmail);
+        } catch (BadRequestException e) {
+            throw e;
         } catch (Exception e) {
-            log.warn("Failed to send receipt via Microsoft for order {} to {}: {}", order.getId(), toEmail, e.getMessage());
-            // Surface a clearer message for Microsoft failures instead of generic SMTP text.
-            throw new BadRequestException(ErrorCode.EM004);
+            String detail = e.getMessage() != null ? e.getMessage() : "unknown error";
+            log.warn("Failed to send receipt via Microsoft for order {} to {}: {}", order.getId(), toEmail, detail);
+            // Include the Graph error detail in the response so admins can act on it
+            throw new BadRequestException(ErrorCode.EM004, detail);
         }
     }
 
