@@ -82,12 +82,12 @@ public class ReceiptEmailService {
 
     private void sendReceiptViaMicrosoft(Company company, String toEmail, Order order, String from) {
         if (encryptionKey == null || encryptionKey.isBlank()) {
-            log.warn("sendReceiptViaMicrosoft: SMTP_ENCRYPTION_KEY not configured; cannot decrypt Microsoft refresh token");
+            log.warn("sendReceiptViaMicrosoft: SMTP_ENCRYPTION_KEY not configured; cannot decrypt Microsoft refresh token (companyId={})", company.getId());
             throw new BadRequestException(ErrorCode.EM002);
         }
         String refresh = SmtpPasswordEncryption.decrypt(company.getMsRefreshTokenEncrypted(), encryptionKey);
         if (refresh == null || refresh.isBlank()) {
-            log.warn("sendReceiptViaMicrosoft: decrypted Microsoft refresh token is empty");
+            log.warn("sendReceiptViaMicrosoft: decrypted Microsoft refresh token is empty (companyId={})", company.getId());
             throw new BadRequestException(ErrorCode.EM002);
         }
         try {
@@ -95,10 +95,11 @@ public class ReceiptEmailService {
             String subject = "Receipt #" + order.getId() + " - " + (company.getName() != null ? company.getName() : "Your purchase");
             String body = buildReceiptHtml(company, order);
             // Graph implementation currently sends Text; keep it simple.
+            log.info("sendReceiptViaMicrosoft: attempting Graph sendMail from={} to={} orderId={}", from, toEmail, order.getId());
             microsoftGraphMailService.sendMail(tok.accessToken(), from, toEmail, subject, stripHtml(body));
             log.info("Receipt email (Microsoft) sent for order {} to {}", order.getId(), toEmail);
         } catch (Exception e) {
-            log.warn("Failed to send receipt via Microsoft: {}", e.getMessage());
+            log.warn("Failed to send receipt via Microsoft for order {} to {}: {}", order.getId(), toEmail, e.getMessage());
             // Surface a clearer message for Microsoft failures instead of generic SMTP text.
             throw new BadRequestException(ErrorCode.EM001);
         }

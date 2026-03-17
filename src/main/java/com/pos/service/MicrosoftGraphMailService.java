@@ -53,7 +53,9 @@ public class MicrosoftGraphMailService {
 
             HttpResponse<String> resp = HttpClient.newHttpClient().send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
-                log.warn("Graph sendMail failed: status={} body={}", resp.statusCode(), truncate(resp.body()));
+                String wwwAuth = resp.headers().firstValue("WWW-Authenticate").orElse("");
+                log.warn("Graph sendMail failed: status={} wwwAuth={} body={} from={} to={}",
+                        resp.statusCode(), truncate(wwwAuth), truncate(resp.body()), fromEmail, toEmail);
                 throw new IllegalStateException("Graph sendMail failed");
             }
         } catch (Exception e) {
