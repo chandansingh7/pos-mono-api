@@ -23,6 +23,8 @@ public class CompanyMailSenderFactory {
 
     /**
      * Creates a mail sender from the company's SMTP config, or null if not configured.
+     * Auto-corrects the SMTP host when a personal Outlook/Hotmail/Live address is saved
+     * against the Office 365 host — a common misconfiguration.
      */
     public JavaMailSender createSender(Company company) {
         if (company == null || company.getSmtpHost() == null || company.getSmtpHost().isBlank()) {
@@ -34,9 +36,14 @@ public class CompanyMailSenderFactory {
             log.debug("Company SMTP incomplete: missing username or password");
             return null;
         }
+
+        // Auto-correct: personal @outlook/@hotmail/@live accounts must use smtp-mail.outlook.com,
+        // not smtp.office365.com (which is for work/school accounts only).
+        String host = resolveHost(company.getSmtpHost(), username);
+
         try {
             JavaMailSenderImpl sender = new JavaMailSenderImpl();
-            sender.setHost(company.getSmtpHost());
+            sender.setHost(host);
             sender.setPort(company.getSmtpPort() != null ? company.getSmtpPort() : 587);
             sender.setUsername(username);
             sender.setPassword(password);
@@ -52,19 +59,35 @@ public class CompanyMailSenderFactory {
             if (useSSL) {
                 props.put("mail.smtp.ssl.enable", "true");
             }
-            // Required by Outlook/Hotmail: must send EHLO with a valid hostname
-            props.put("mail.smtp.ssl.trust", company.getSmtpHost());
+            props.put("mail.smtp.ssl.trust", host);
             props.put("mail.smtp.connectiontimeout", "10000");
             props.put("mail.smtp.timeout", "10000");
             props.put("mail.smtp.writetimeout", "10000");
             sender.setJavaMailProperties(props);
             log.debug("Created mail sender: host={} port={} startTls={} ssl={} username={}",
-                    company.getSmtpHost(), sender.getPort(), startTls, useSSL, username);
+                    host, sender.getPort(), startTls, useSSL, username);
             return sender;
         } catch (Exception e) {
             log.warn("Failed to create mail sender from company config: {}", e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * Returns the correct SMTP host for the given username.
+     * Personal Microsoft accounts (@outlook.com, @hotmail.com, @live.com) must use
+     * smtp-mail.outlook.com, not smtp.office365.com.
+     */
+    private String resolveHost(String configuredHost, String username) {
+        boolean isOffice365Host = "smtp.office365.com".equalsIgnoreCase(configuredHost.trim());
+        boolean isPersonalAccount = username != null &&
+                username.toLowerCase().matches(".*@(outlook|hotmail|live)\\..+");
+        if (isOffice365Host && isPersonalAccount) {
+            log.warn("Auto-correcting SMTP host: {} uses a personal Microsoft account but smtp.office365.com " +
+                     "was configured — switching to smtp-mail.outlook.com", username);
+            return "smtp-mail.outlook.com";
+        }
+        return configuredHost;
     }
 
     private String decryptPassword(String encrypted) {
