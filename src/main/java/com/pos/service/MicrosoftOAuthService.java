@@ -57,6 +57,7 @@ public class MicrosoftOAuthService {
             throw new IllegalStateException("Microsoft OAuth is not configured (ms.oauth.*)");
         }
         String url = "https://login.microsoftonline.com/" + (tenant == null || tenant.isBlank() ? "common" : tenant) + "/oauth2/v2.0/token";
+        log.info("MicrosoftOAuthService.exchangeCodeForTokens: tenant={}, redirectUri={}", tenant, redirectUri);
 
         Map<String, String> form = new LinkedHashMap<>();
         form.put("client_id", clientId);

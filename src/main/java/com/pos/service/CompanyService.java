@@ -237,17 +237,20 @@ public class CompanyService {
 
     @Transactional
     public CompanyResponse connectMicrosoft(String code, String updatedBy) {
+        log.info("connectMicrosoft: starting code exchange for updatedBy={} (code length={})", updatedBy, code != null ? code.length() : 0);
         Company company = companyRepository.findFirstByOrderByIdAsc().orElseGet(() -> {
             Company c = new Company();
             c.setName("My Store");
             return companyRepository.save(c);
         });
         if (smtpEncryptionKey == null || smtpEncryptionKey.isBlank()) {
+            log.warn("connectMicrosoft: SMTP_ENCRYPTION_KEY is not configured");
             throw new BadRequestException(ErrorCode.EM003);
         }
         try {
             MicrosoftOAuthService.TokenResponse tok = microsoftOAuthService.exchangeCodeForTokens(code);
             if (tok.refreshToken() == null || tok.refreshToken().isBlank()) {
+                log.warn("connectMicrosoft: token exchange returned empty refresh token");
                 throw new BadRequestException(ErrorCode.EM003);
             }
             String enc = SmtpPasswordEncryption.encrypt(tok.refreshToken(), smtpEncryptionKey);
@@ -259,11 +262,13 @@ public class CompanyService {
             company.setEmailSendMethod("MICROSOFT");
             company.setUpdatedBy(updatedBy);
             company = companyRepository.save(company);
+            log.info("connectMicrosoft: success; msAccountEmail={}, companyId={}", company.getMsAccountEmail(), company.getId());
             return CompanyResponse.from(company);
         } catch (BadRequestException e) {
+            log.warn("connectMicrosoft: BadRequestException code={} message={}", ErrorCode.EM003, e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.warn("Microsoft connect failed: {}", e.getMessage());
+            log.warn("Microsoft connect failed: {}", e.getMessage(), e);
             throw new BadRequestException(ErrorCode.EM003);
         }
     }

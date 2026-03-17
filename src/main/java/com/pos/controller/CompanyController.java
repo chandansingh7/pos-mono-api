@@ -94,6 +94,8 @@ public class CompanyController {
             @RequestParam(value = "code", required = false) String code,
             @RequestParam(value = "error", required = false) String error,
             @RequestParam(value = "error_description", required = false) String errorDescription) {
+        // Basic diagnostics to help debug redirect issues.
+        log.info("microsoftCallback: codePresent={} error={} errorDescription={}", code != null && !code.isBlank(), error, errorDescription);
         String base = (frontendSuccessUrl != null && !frontendSuccessUrl.isBlank()) ? frontendSuccessUrl.trim() : null;
         if (base == null) {
             return ResponseEntity.badRequest().build();
