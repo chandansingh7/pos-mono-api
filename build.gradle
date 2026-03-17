@@ -24,6 +24,11 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
 
+    // Pin Jakarta Mail implementation explicitly to prevent ServiceLoader failures on Azure.
+    // spring-boot-starter-mail brings angus-mail transitively, but Azure's flat-deploy can
+    // corrupt META-INF/services merging. Pinning forces the correct provider to be included.
+    implementation 'org.eclipse.angus:angus-mail:2.0.3'
+
     // Database
     runtimeOnly 'org.postgresql:postgresql'
 
