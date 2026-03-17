@@ -212,8 +212,13 @@ public class CompanyService {
             log.info("Email verified for company by {}", updatedBy);
             return CompanyResponse.from(company);
         } catch (MessagingException e) {
-            log.warn("Email verification failed: {}", e.getMessage());
-            throw new BadRequestException(ErrorCode.EM003);
+            log.warn("Email verification failed (MessagingException): host={} port={} username={} error={}",
+                    company.getSmtpHost(), company.getSmtpPort(), company.getSmtpUsername(), e.getMessage());
+            throw new BadRequestException(ErrorCode.EM003, e.getMessage());
+        } catch (Exception e) {
+            log.warn("Email verification failed (unexpected): host={} port={} username={} error={}",
+                    company.getSmtpHost(), company.getSmtpPort(), company.getSmtpUsername(), e.getMessage());
+            throw new BadRequestException(ErrorCode.EM003, e.getMessage());
         }
     }
 

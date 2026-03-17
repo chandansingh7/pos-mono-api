@@ -40,10 +40,26 @@ public class CompanyMailSenderFactory {
             sender.setPort(company.getSmtpPort() != null ? company.getSmtpPort() : 587);
             sender.setUsername(username);
             sender.setPassword(password);
+
+            boolean startTls = Boolean.TRUE.equals(company.getSmtpStartTls());
+            // Port 465 uses implicit SSL (SMTPS), port 587/25 uses STARTTLS
+            boolean useSSL = company.getSmtpPort() != null && company.getSmtpPort() == 465;
+
             Properties props = new Properties();
             props.put("mail.smtp.auth", "true");
-            props.put("mail.smtp.starttls.enable", Boolean.TRUE.equals(company.getSmtpStartTls()) ? "true" : "false");
+            props.put("mail.smtp.starttls.enable", startTls ? "true" : "false");
+            props.put("mail.smtp.starttls.required", startTls ? "true" : "false");
+            if (useSSL) {
+                props.put("mail.smtp.ssl.enable", "true");
+            }
+            // Required by Outlook/Hotmail: must send EHLO with a valid hostname
+            props.put("mail.smtp.ssl.trust", company.getSmtpHost());
+            props.put("mail.smtp.connectiontimeout", "10000");
+            props.put("mail.smtp.timeout", "10000");
+            props.put("mail.smtp.writetimeout", "10000");
             sender.setJavaMailProperties(props);
+            log.debug("Created mail sender: host={} port={} startTls={} ssl={} username={}",
+                    company.getSmtpHost(), sender.getPort(), startTls, useSSL, username);
             return sender;
         } catch (Exception e) {
             log.warn("Failed to create mail sender from company config: {}", e.getMessage());
