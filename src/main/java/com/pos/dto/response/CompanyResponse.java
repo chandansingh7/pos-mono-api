@@ -87,6 +87,15 @@ public class CompanyResponse {
     /** Optional custom page height (mm) for CUSTOM label template. */
     private Integer labelPageHeightMm;
 
+    /** Admin-controlled: allow dashboard when offline. */
+    private Boolean offlineAllowDashboard;
+
+    /** Admin-controlled: allow viewing orders when offline. */
+    private Boolean offlineAllowOrders;
+
+    /** Admin-controlled: allow POS when offline. */
+    private Boolean offlineAllowPos;
+
     public static CompanyResponse from(Company c) {
         if (c == null) return null;
         return CompanyResponse.builder()
@@ -133,6 +142,9 @@ public class CompanyResponse {
                 .labelTemplateLabelPaddingMm(c.getLabelTemplateLabelPaddingMm())
                 .labelPageWidthMm(c.getLabelPageWidthMm())
                 .labelPageHeightMm(c.getLabelPageHeightMm())
+                .offlineAllowDashboard(c.getOfflineAllowDashboard())
+                .offlineAllowOrders(c.getOfflineAllowOrders())
+                .offlineAllowPos(c.getOfflineAllowPos())
                 .updatedAt(c.getUpdatedAt())
                 .build();
     }

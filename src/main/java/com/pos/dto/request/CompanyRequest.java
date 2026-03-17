@@ -124,4 +124,13 @@ public class CompanyRequest {
 
     /** Optional custom page height (mm) for CUSTOM label template. */
     private Integer labelPageHeightMm;
+
+    /** Admin-controlled: allow dashboard when offline. */
+    private Boolean offlineAllowDashboard;
+
+    /** Admin-controlled: allow viewing orders when offline. */
+    private Boolean offlineAllowOrders;
+
+    /** Admin-controlled: allow POS when offline (place orders, sync when online). */
+    private Boolean offlineAllowPos;
 }

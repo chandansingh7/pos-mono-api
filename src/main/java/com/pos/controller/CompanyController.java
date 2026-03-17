@@ -7,7 +7,6 @@ import com.pos.service.CompanyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -92,7 +91,7 @@ public class CompanyController {
      * OAuth callback — no auth. Microsoft redirects here with code; we exchange it, save tokens, then redirect to frontend success page.
      */
     @GetMapping("/microsoft/callback")
-    public ResponseEntity<Void> microsoftCallback(
+    public ResponseEntity<?> microsoftCallback(
             @RequestParam(value = "code", required = false) String code,
             @RequestParam(value = "error", required = false) String error,
             @RequestParam(value = "error_description", required = false) String errorDescription) {
@@ -100,7 +99,14 @@ public class CompanyController {
         log.info("microsoftCallback: codePresent={} error={} errorDescription={}", code != null && !code.isBlank(), error, errorDescription);
         String base = (frontendSuccessUrl != null && !frontendSuccessUrl.isBlank()) ? frontendSuccessUrl.trim() : null;
         if (base == null) {
-            return ResponseEntity.badRequest().build();
+            log.warn("Microsoft OAuth callback: MS_OAUTH_FRONTEND_SUCCESS_URL is not set; cannot redirect after sign-in");
+            String html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Configuration Error</title></head><body style=\"font-family:system-ui,sans-serif;max-width:480px;margin:48px auto;padding:24px;text-align:center\">"
+                    + "<h2 style=\"color:#c62828\">Server configuration error</h2>"
+                    + "<p>Microsoft sign-in cannot complete because <code>MS_OAUTH_FRONTEND_SUCCESS_URL</code> is not set on the server.</p>"
+                    + "<p>Contact your administrator to set this environment variable to your frontend success page URL, e.g.:</p>"
+                    + "<p><code>http://localhost:4200/auth/microsoft-callback</code> (local dev)</p>"
+                    + "<p>You can close this window and try again from Settings after the server is configured.</p></body></html>";
+            return ResponseEntity.status(500).contentType(MediaType.TEXT_HTML).body(html);
         }
         URI redirectTo;
         if (code != null && !code.isBlank()) {

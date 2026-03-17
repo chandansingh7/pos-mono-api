@@ -114,6 +114,13 @@ public class CompanyService {
                 request.getLabelPageWidthMm() != null ? request.getLabelPageWidthMm() : null);
         company.setLabelPageHeightMm(
                 request.getLabelPageHeightMm() != null ? request.getLabelPageHeightMm() : null);
+        // Admin-controlled offline behaviour
+        company.setOfflineAllowDashboard(
+                request.getOfflineAllowDashboard() != null ? request.getOfflineAllowDashboard() : Boolean.TRUE);
+        company.setOfflineAllowOrders(
+                request.getOfflineAllowOrders() != null ? request.getOfflineAllowOrders() : Boolean.FALSE);
+        company.setOfflineAllowPos(
+                request.getOfflineAllowPos() != null ? request.getOfflineAllowPos() : Boolean.FALSE);
         company.setUpdatedBy(updatedBy);
         company = companyRepository.save(company);
         log.info("Company settings updated by {}", updatedBy);

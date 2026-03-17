@@ -204,6 +204,25 @@ public class Company {
     @Column(name = "label_page_height_mm")
     private Integer labelPageHeightMm;
 
+    /**
+     * Admin-controlled offline behaviour: allow dashboard when offline.
+     * When false, dashboard is blocked when device has no network.
+     */
+    @Column(name = "offline_allow_dashboard")
+    private Boolean offlineAllowDashboard;
+
+    /**
+     * Admin-controlled offline behaviour: allow viewing orders list when offline (cached data).
+     */
+    @Column(name = "offline_allow_orders")
+    private Boolean offlineAllowOrders;
+
+    /**
+     * Admin-controlled offline behaviour: allow POS when offline (place orders, sync when online).
+     */
+    @Column(name = "offline_allow_pos")
+    private Boolean offlineAllowPos;
+
     private LocalDateTime updatedAt;
 
     private String updatedBy;
