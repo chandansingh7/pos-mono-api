@@ -63,6 +63,7 @@ public enum ErrorCode {
     EM001("EM001", "Company email is not set in Settings; cannot send receipt"),
     EM002("EM002", "Email (SMTP) is not configured; contact administrator"),
     EM003("EM003", "Email verification failed; check SMTP settings and app password (use App Password if you have 2FA)"),
+    EM004("EM004", "Failed to send email via Microsoft; check Microsoft account permissions or try again later"),
 
     // ── Inventory ─────────────────────────────────────────────────────────────
     IN001("IN001", "Inventory record not found for this product"),

@@ -101,7 +101,7 @@ public class ReceiptEmailService {
         } catch (Exception e) {
             log.warn("Failed to send receipt via Microsoft for order {} to {}: {}", order.getId(), toEmail, e.getMessage());
             // Surface a clearer message for Microsoft failures instead of generic SMTP text.
-            throw new BadRequestException(ErrorCode.EM001);
+            throw new BadRequestException(ErrorCode.EM004);
         }
     }
 
