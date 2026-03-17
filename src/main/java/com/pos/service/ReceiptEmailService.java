@@ -82,10 +82,12 @@ public class ReceiptEmailService {
 
     private void sendReceiptViaMicrosoft(Company company, String toEmail, Order order, String from) {
         if (encryptionKey == null || encryptionKey.isBlank()) {
+            log.warn("sendReceiptViaMicrosoft: SMTP_ENCRYPTION_KEY not configured; cannot decrypt Microsoft refresh token");
             throw new BadRequestException(ErrorCode.EM002);
         }
         String refresh = SmtpPasswordEncryption.decrypt(company.getMsRefreshTokenEncrypted(), encryptionKey);
         if (refresh == null || refresh.isBlank()) {
+            log.warn("sendReceiptViaMicrosoft: decrypted Microsoft refresh token is empty");
             throw new BadRequestException(ErrorCode.EM002);
         }
         try {
@@ -97,7 +99,8 @@ public class ReceiptEmailService {
             log.info("Receipt email (Microsoft) sent for order {} to {}", order.getId(), toEmail);
         } catch (Exception e) {
             log.warn("Failed to send receipt via Microsoft: {}", e.getMessage());
-            throw new BadRequestException(ErrorCode.EM002);
+            // Surface a clearer message for Microsoft failures instead of generic SMTP text.
+            throw new BadRequestException(ErrorCode.EM001);
         }
     }
 
