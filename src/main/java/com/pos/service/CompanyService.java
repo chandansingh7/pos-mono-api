@@ -241,8 +241,16 @@ public class CompanyService {
             microsoftGraphMailService.sendMail(tok.accessToken(), me, to, "CicdPOS – Email setup verified", "Your Microsoft email setup is working. You can send order receipts from the Orders page.");
             company.setMsConnectedAt(LocalDateTime.now());
             company.setUpdatedBy(updatedBy);
+        } catch (IllegalStateException e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "";
+            log.warn("Microsoft email verification failed: {}", msg);
+            // HTTP 401 from Graph = personal Outlook account — not supported for Mail.Send
+            if (msg.contains("401")) {
+                throw new BadRequestException(ErrorCode.EM005);
+            }
+            throw new BadRequestException(ErrorCode.EM004, msg);
         } catch (Exception e) {
-            log.warn("Microsoft email verification failed: {}", e.getMessage());
+            log.warn("Microsoft email verification failed (unexpected): {}", e.getMessage());
             throw new BadRequestException(ErrorCode.EM003);
         }
     }
