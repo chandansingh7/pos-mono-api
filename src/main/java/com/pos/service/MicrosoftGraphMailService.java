@@ -61,8 +61,9 @@ public class MicrosoftGraphMailService {
                 String graphError = extractGraphError(resp.body());
                 throw new IllegalStateException("Graph sendMail HTTP " + resp.statusCode() + ": " + graphError);
             }
+        } catch (IllegalStateException e) {
+            throw e;
         } catch (Exception e) {
-            if (e instanceof IllegalStateException) throw e;
             throw new IllegalStateException("Graph sendMail failed: " + e.getMessage(), e);
         }
     }
@@ -84,8 +85,9 @@ public class MicrosoftGraphMailService {
             String mail = json.path("mail").asText(null);
             if (mail != null && !mail.isBlank()) return mail;
             return json.path("userPrincipalName").asText(null);
+        } catch (IllegalStateException e) {
+            throw e;
         } catch (Exception e) {
-            if (e instanceof IllegalStateException) throw e;
             throw new IllegalStateException("Graph /me failed: " + e.getMessage(), e);
         }
     }
