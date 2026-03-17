@@ -68,7 +68,7 @@ jobs:
 
     - name: Prepare clean deployment package
       run: |
-        # Rename to a fixed filename so Azure always picks the right JAR
+        # Rename to a fixed filename so Azure always starts the same JAR
         mv release/cicdpos-1.0.0.jar release/app.jar
 
     - name: Deploy to Azure Web App
@@ -77,4 +77,3 @@ jobs:
         app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
         package: release/app.jar
-        startup-command: 'java -jar /home/site/wwwroot/app.jar'
