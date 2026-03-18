@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.mail.MailAuthenticationException;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -74,9 +76,16 @@ public class ReceiptEmailService {
             helper.setText(htmlBody, true);
             sender.send(message);
             log.info("Receipt email sent for order {} to {}", order.getId(), toEmail);
-        } catch (MessagingException e) {
+        } catch (MailAuthenticationException e) {
+            log.warn("SMTP authentication failed for order {} (host={} user={}): {}",
+                    order.getId(), company.getSmtpHost(), company.getSmtpUsername(), e.getMessage());
+            throw new BadRequestException(ErrorCode.EM006);
+        } catch (MailException e) {
             log.error("Failed to send receipt email for order {}: {}", order.getId(), e.getMessage());
-            throw new BadRequestException(ErrorCode.EM002);
+            throw new BadRequestException(ErrorCode.EM002, e.getMessage());
+        } catch (MessagingException e) {
+            log.error("Failed to send receipt email (messaging) for order {}: {}", order.getId(), e.getMessage());
+            throw new BadRequestException(ErrorCode.EM002, e.getMessage());
         }
     }
 

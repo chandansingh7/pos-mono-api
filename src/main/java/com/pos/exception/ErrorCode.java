@@ -65,6 +65,7 @@ public enum ErrorCode {
     EM003("EM003", "Email verification failed; check SMTP settings and app password (use App Password if you have 2FA)"),
     EM004("EM004", "Failed to send email via Microsoft; check Microsoft account permissions or try again later"),
     EM005("EM005", "Microsoft sign-in account cannot send mail via Graph API (personal Outlook accounts are not supported). Use SMTP instead — go to Settings → Email → choose Outlook / Hotmail (personal) and enter your password."),
+    EM006("EM006", "SMTP authentication failed — wrong email or password. Go to Settings → Email and re-enter your password. If 2FA is ON, use an App Password from account.microsoft.com/security."),
 
     // ── Inventory ─────────────────────────────────────────────────────────────
     IN001("IN001", "Inventory record not found for this product"),

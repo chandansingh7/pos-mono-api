@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.mail.MailAuthenticationException;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -211,8 +213,16 @@ public class CompanyService {
             company = companyRepository.save(company);
             log.info("Email verified for company by {}", updatedBy);
             return CompanyResponse.from(company);
+        } catch (MailAuthenticationException e) {
+            log.warn("Email verification failed (auth): host={} port={} username={} error={}",
+                    company.getSmtpHost(), company.getSmtpPort(), company.getSmtpUsername(), e.getMessage());
+            throw new BadRequestException(ErrorCode.EM006);
+        } catch (MailException e) {
+            log.warn("Email verification failed (mail): host={} port={} username={} error={}",
+                    company.getSmtpHost(), company.getSmtpPort(), company.getSmtpUsername(), e.getMessage());
+            throw new BadRequestException(ErrorCode.EM003, e.getMessage());
         } catch (MessagingException e) {
-            log.warn("Email verification failed (MessagingException): host={} port={} username={} error={}",
+            log.warn("Email verification failed (messaging): host={} port={} username={} error={}",
                     company.getSmtpHost(), company.getSmtpPort(), company.getSmtpUsername(), e.getMessage());
             throw new BadRequestException(ErrorCode.EM003, e.getMessage());
         } catch (Exception e) {
