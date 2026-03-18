@@ -220,6 +220,9 @@ public class CompanyService {
             if (isMicrosoftBasicAuthDisabled(authMsg, company.getSmtpUsername())) {
                 throw new BadRequestException(ErrorCode.EM007);
             }
+            if (isGmailAppPasswordRequired(authMsg)) {
+                throw new BadRequestException(ErrorCode.EM008);
+            }
             throw new BadRequestException(ErrorCode.EM006);
         } catch (MailException e) {
             log.warn("Email verification failed (mail): host={} port={} username={} error={}",
@@ -374,5 +377,10 @@ public class CompanyService {
             return true;
         }
         return username != null && username.toLowerCase().matches(".*@(outlook|hotmail|live)\\..+");
+    }
+
+    /** Returns true when Gmail requires an App Password (534 5.7.9). */
+    private static boolean isGmailAppPasswordRequired(String fullMsg) {
+        return fullMsg.contains("5.7.9") || fullMsg.contains("Application-specific password required");
     }
 }
