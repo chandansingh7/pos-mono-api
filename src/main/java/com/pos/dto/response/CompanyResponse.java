@@ -24,6 +24,8 @@ public class CompanyResponse {
     private Integer smtpPort;
     private String smtpUsername;
     private Boolean smtpStartTls;
+    /** True when an encrypted SMTP password is stored — never returns the actual password. */
+    private Boolean smtpPasswordSet;
     private LocalDateTime emailVerifiedAt;
 
     private String emailSendMethod;
@@ -111,6 +113,7 @@ public class CompanyResponse {
                 .smtpPort(c.getSmtpPort())
                 .smtpUsername(c.getSmtpUsername())
                 .smtpStartTls(c.getSmtpStartTls())
+                .smtpPasswordSet(c.getSmtpPasswordEncrypted() != null && !c.getSmtpPasswordEncrypted().isBlank())
                 .emailVerifiedAt(c.getEmailVerifiedAt())
                 .emailSendMethod(c.getEmailSendMethod())
                 .msAccountEmail(c.getMsAccountEmail())
