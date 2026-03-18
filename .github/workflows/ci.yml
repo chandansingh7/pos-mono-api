@@ -79,17 +79,36 @@ jobs:
         package: release/app.jar
 
     - name: Restart Azure Web App via Kudu API
+      env:
+        PUBLISH_PROFILE: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        APP_NAME: ${{ secrets.AZURE_WEBAPP_NAME }}
       run: |
-        # Extract credentials from the publish profile XML
-        PROFILE='${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}'
-        USER=$(echo "$PROFILE" | grep -oP 'userName="\K[^"]+' | head -1)
-        PASS=$(echo "$PROFILE" | grep -oP 'userPWD="\K[^"]+' | head -1)
-        APP='${{ secrets.AZURE_WEBAPP_NAME }}'
-        # Call the Kudu restart API — no Azure CLI or resource group needed
+        # Parse publish profile with Python (reliable XML parsing, no regex issues)
+        CREDS=$(python3 - <<'EOF'
+import os, xml.etree.ElementTree as ET
+profile = os.environ.get("PUBLISH_PROFILE", "")
+try:
+    root = ET.fromstring(profile)
+    for pub in root.findall("publishProfile"):
+        method = pub.get("publishMethod", "")
+        if method == "MSDeploy" or method == "FTP":
+            user = pub.get("userName", "")
+            pwd  = pub.get("userPWD", "")
+            if user and pwd:
+                print(f"{user}:{pwd}")
+                break
+except Exception as e:
+    print(f"PARSE_ERROR:{e}", end="")
+EOF
+        )
+        if [[ "$CREDS" == PARSE_ERROR* ]] || [[ -z "$CREDS" ]]; then
+          echo "Could not parse publish profile credentials — skipping restart (app will restart automatically after deploy)"
+          exit 0
+        fi
         HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
-          "https://${APP}.scm.azurewebsites.net/api/restart" \
-          -u "${USER}:${PASS}")
-        echo "Kudu restart response: $HTTP"
-        if [ "$HTTP" != "200" ] && [ "$HTTP" != "204" ]; then
-          echo "Warning: restart returned $HTTP — app may need a manual restart in Azure Portal"
+          "https://${APP_NAME}.scm.azurewebsites.net/api/restart" \
+          -u "$CREDS" --max-time 30)
+        echo "Kudu restart HTTP status: $HTTP"
+        if [[ "$HTTP" != "200" && "$HTTP" != "204" ]]; then
+          echo "Warning: unexpected status $HTTP — app may need a manual restart in Azure Portal"
         fi
