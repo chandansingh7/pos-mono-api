@@ -1,6 +1,7 @@
 package com.pos.dto.response;
 
 import com.pos.entity.Order;
+import com.pos.entity.Refund;
 import com.pos.enums.OrderStatus;
 import com.pos.enums.PaymentMethod;
 import lombok.Builder;
@@ -27,8 +28,14 @@ public class OrderResponse {
     private OrderStatus status;
     private PaymentMethod paymentMethod;
     private LocalDateTime createdAt;
+    /** Populated only when status = REFUNDED. */
+    private RefundResponse refund;
 
     public static OrderResponse from(Order order) {
+        return from(order, null);
+    }
+
+    public static OrderResponse from(Order order, Refund refund) {
         return OrderResponse.builder()
                 .id(order.getId())
                 .customerId(order.getCustomer() != null ? order.getCustomer().getId() : null)
@@ -43,6 +50,7 @@ public class OrderResponse {
                 .status(order.getStatus())
                 .paymentMethod(order.getPaymentMethod())
                 .createdAt(order.getCreatedAt())
+                .refund(refund != null ? RefundResponse.from(refund) : null)
                 .build();
     }
 }

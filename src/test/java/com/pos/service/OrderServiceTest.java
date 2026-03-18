@@ -3,6 +3,7 @@ package com.pos.service;
 import com.pos.config.RewardConfig;
 import com.pos.dto.request.OrderItemRequest;
 import com.pos.dto.request.OrderRequest;
+import com.pos.dto.request.RefundRequest;
 import com.pos.dto.response.OrderResponse;
 import com.pos.entity.*;
 import com.pos.enums.OrderStatus;
@@ -48,7 +49,11 @@ class OrderServiceTest {
     @Mock private CustomerRepository customerRepository;
     @Mock private UserRepository userRepository;
     @Mock private PaymentRepository paymentRepository;
+    @Mock private CompanyRepository companyRepository;
+    @Mock private RefundRepository refundRepository;
+    @Mock private TaxRuleRepository taxRuleRepository;
     @Mock private RewardConfig rewardConfig;
+    @Mock private ReceiptEmailService receiptEmailService;
 
     @InjectMocks
     private OrderService orderService;
@@ -62,6 +67,8 @@ class OrderServiceTest {
     void setUp() {
         lenient().when(rewardConfig.getPointsPerDollar()).thenReturn(1);
         lenient().when(rewardConfig.getRedemptionRate()).thenReturn(100);
+        lenient().when(taxRuleRepository.findAllByOrderByTaxCategoryAsc()).thenReturn(List.of());
+        lenient().when(refundRepository.findByOrderId(any())).thenReturn(Optional.empty());
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken("cashier1", null, List.of()));
         cashier = new User();
@@ -78,6 +85,7 @@ class OrderServiceTest {
                 .total(new BigDecimal("11.00"))
                 .status(OrderStatus.COMPLETED)
                 .paymentMethod(PaymentMethod.CASH)
+                .items(List.of())
                 .build();
     }
 
@@ -224,5 +232,77 @@ class OrderServiceTest {
         assertThat(stats).isNotNull();
         assertThat(stats.total()).isEqualTo(100L);
         assertThat(stats.completed()).isEqualTo(80L);
+    }
+
+    // ── Refund tests ─────────────────────────────────────────────────────────
+
+    @Test
+    void refund_completedOrder_setsRefundedStatusAndSavesRefundRecord() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(paymentRepository.findByOrderId(1L)).thenReturn(Optional.empty());
+        when(refundRepository.save(any())).thenAnswer(inv -> {
+            Refund r = inv.getArgument(0);
+            r.getClass(); // no-op, just confirm non-null
+            return r;
+        });
+
+        RefundRequest req = new RefundRequest();
+        req.setReason("Customer changed mind");
+        OrderResponse response = orderService.refund(1L, req);
+
+        assertThat(response).isNotNull();
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.REFUNDED);
+        verify(refundRepository, times(1)).save(any(Refund.class));
+    }
+
+    @Test
+    void refund_alreadyRefundedOrder_throwsBadRequest() {
+        order.setStatus(OrderStatus.REFUNDED);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.refund(1L, null))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void refund_cancelledOrder_throwsBadRequest() {
+        order.setStatus(OrderStatus.CANCELLED);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.refund(1L, null))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    // ── Tax resolution tests ──────────────────────────────────────────────────
+
+    @Test
+    void create_withGlobalTaxRate_appliesCompanyRate() {
+        Company company = new Company();
+        company.setTaxRate(new BigDecimal("0.08")); // 8%
+        company.setTaxEnabled(true);
+
+        lenient().when(companyRepository.findFirstByOrderByIdAsc()).thenReturn(Optional.of(company));
+        when(userRepository.findByUsername("cashier1")).thenReturn(Optional.of(cashier));
+        when(productRepository.findById(10L)).thenReturn(Optional.of(product));
+        when(inventoryRepository.findByProductId(10L)).thenReturn(Optional.of(inventory));
+        when(orderRepository.save(any())).thenAnswer(inv -> {
+            Order o = inv.getArgument(0);
+            o.setId(99L);
+            o.setItems(List.of());
+            return o;
+        });
+        when(paymentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        OrderItemRequest itemReq = new OrderItemRequest();
+        itemReq.setProductId(10L);
+        itemReq.setQuantity(BigDecimal.ONE);
+        OrderRequest request = new OrderRequest();
+        request.setItems(List.of(itemReq));
+        request.setPaymentMethod(PaymentMethod.CASH);
+
+        OrderResponse response = orderService.create(request);
+        // Tax should be 10.00 * 0.08 = 0.80
+        assertThat(response.getTax()).isEqualByComparingTo("0.80");
     }
 }

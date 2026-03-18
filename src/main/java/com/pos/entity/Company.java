@@ -81,6 +81,19 @@ public class Company {
 
     private String taxId;
 
+    /**
+     * Tax rate as a decimal fraction (e.g. 0.08 = 8%, 0.10 = 10%).
+     * Null → backward-compatible default of 10% is applied at order creation.
+     */
+    @Column(name = "tax_rate", precision = 6, scale = 4)
+    private BigDecimal taxRate;
+
+    /**
+     * When false, no tax is applied to any order. Null is treated as true (tax enabled).
+     */
+    @Column(name = "tax_enabled")
+    private Boolean taxEnabled;
+
     private String website;
 
     /** Optional footer line on receipts (e.g. "Thank you!") */

@@ -1,6 +1,7 @@
 package com.pos.controller;
 
 import com.pos.dto.request.OrderRequest;
+import com.pos.dto.request.RefundRequest;
 import com.pos.dto.response.ApiResponse;
 import com.pos.dto.response.OrderResponse;
 import com.pos.service.OrderService;
@@ -47,6 +48,14 @@ public class OrderController {
     @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<OrderResponse>> cancel(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.ok("Order cancelled", orderService.cancel(id)));
+    }
+
+    @PostMapping("/{id}/refund")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
+    public ResponseEntity<ApiResponse<OrderResponse>> refund(
+            @PathVariable Long id,
+            @Valid @RequestBody(required = false) RefundRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok("Order refunded successfully", orderService.refund(id, request)));
     }
 
     @PostMapping("/{id}/send-receipt")

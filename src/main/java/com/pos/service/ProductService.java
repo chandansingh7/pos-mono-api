@@ -71,6 +71,8 @@ public class ProductService {
 
         String unitType = request.getSaleUnitType() != null && !request.getSaleUnitType().isBlank() ? request.getSaleUnitType().trim().toUpperCase() : "PIECE";
         String unit = request.getSaleUnit() != null && !request.getSaleUnit().isBlank() ? request.getSaleUnit().trim().toLowerCase() : "each";
+        String taxCat = request.getTaxCategory() != null && !request.getTaxCategory().isBlank()
+                ? request.getTaxCategory().trim().toUpperCase() : null;
         Product product = Product.builder()
                 .name(request.getName())
                 .sku(request.getSku())
@@ -80,6 +82,7 @@ public class ProductService {
                 .price(request.getPrice())
                 .saleUnitType(unitType)
                 .saleUnit(unit)
+                .taxCategory(taxCat)
                 .category(category)
                 .imageUrl(request.getImageUrl())
                 .active(request.isActive())
@@ -125,6 +128,9 @@ public class ProductService {
         if (request.getImageUrl() != null && !request.getImageUrl().isBlank()) {
             product.setImageUrl(request.getImageUrl());
         }
+        // taxCategory: null clears override (product reverts to global rate)
+        product.setTaxCategory(request.getTaxCategory() != null && !request.getTaxCategory().isBlank()
+                ? request.getTaxCategory().trim().toUpperCase() : null);
         product.setActive(request.isActive());
         product.setUpdatedBy(currentUsername());
 

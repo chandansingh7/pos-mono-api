@@ -31,4 +31,5 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // ── Stats ──────────────────────────────────────────────────────────────────
     long countByActiveTrue();
     long countByActiveFalse();
+    long countByTaxCategory(String taxCategory);
 }

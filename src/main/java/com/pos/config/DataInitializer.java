@@ -6,6 +6,7 @@ import com.pos.enums.PaymentMethod;
 import com.pos.enums.PaymentStatus;
 import com.pos.enums.Role;
 import com.pos.repository.*;
+import com.pos.service.TaxRuleService;
 import com.pos.entity.Company;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class DataInitializer implements ApplicationRunner {
     private final OrderItemRepository orderItemRepository;
     private final PaymentRepository   paymentRepository;
     private final CompanyRepository   companyRepository;
+    private final TaxRuleService      taxRuleService;
     private final PasswordEncoder     passwordEncoder;
     private final EntityManager       entityManager;
 
@@ -50,6 +52,7 @@ public class DataInitializer implements ApplicationRunner {
         List<Customer> customers = seedCustomers();
         seedCompany();
         seedOrdersAndPayments(users, products, customers);
+        taxRuleService.seedDefaults();
 
         log.info("=== DataInitializer: done ===");
     }

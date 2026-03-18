@@ -58,6 +58,8 @@ public enum ErrorCode {
     OR003("OR003", "Order is already cancelled"),
     OR004("OR004", "Cannot cancel a refunded order"),
     OR005("OR005", "Customer has no email address; cannot send receipt"),
+    OR006("OR006", "Order is already refunded"),
+    OR007("OR007", "Only completed orders can be refunded"),
 
     // ── Email (receipt) ───────────────────────────────────────────────────────
     EM001("EM001", "Company email is not set in Settings; cannot send receipt"),
@@ -87,6 +89,11 @@ public enum ErrorCode {
 
     // ── Validation ────────────────────────────────────────────────────────────
     VA001("VA001", "One or more fields failed validation"),
+
+    // ── Tax rules ─────────────────────────────────────────────────────────────
+    TX001("TX001", "Tax rule not found"),
+    TX002("TX002", "Tax category already exists"),
+    TX003("TX003", "Cannot delete a tax rule that is assigned to one or more products"),
 
     // ── Backup / Restore ────────────────────────────────────────────────────
     BR001("BR001", "Backup or restore failed"),

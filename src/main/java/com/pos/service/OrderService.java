@@ -3,6 +3,7 @@ package com.pos.service;
 import com.pos.config.RewardConfig;
 import com.pos.dto.request.OrderItemRequest;
 import com.pos.dto.request.OrderRequest;
+import com.pos.dto.request.RefundRequest;
 import com.pos.dto.response.OrderResponse;
 import com.pos.entity.*;
 import com.pos.enums.OrderStatus;
@@ -23,33 +24,43 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderService {
 
-    private static final BigDecimal TAX_RATE = new BigDecimal("0.10");
+    /** Backward-compatible default — used when company.taxRate is null. */
+    private static final BigDecimal DEFAULT_TAX_RATE = new BigDecimal("0.10");
 
-    private final OrderRepository       orderRepository;
+    private final OrderRepository      orderRepository;
     private final OrderItemRepository  orderItemRepository;
     private final ProductRepository    productRepository;
     private final InventoryRepository  inventoryRepository;
-    private final CustomerRepository  customerRepository;
-    private final UserRepository      userRepository;
-    private final PaymentRepository   paymentRepository;
-    private final CompanyRepository   companyRepository;
-    private final RewardConfig        rewardConfig;
-    private final ReceiptEmailService receiptEmailService;
+    private final CustomerRepository   customerRepository;
+    private final UserRepository       userRepository;
+    private final PaymentRepository    paymentRepository;
+    private final CompanyRepository    companyRepository;
+    private final RefundRepository     refundRepository;
+    private final TaxRuleRepository    taxRuleRepository;
+    private final RewardConfig         rewardConfig;
+    private final ReceiptEmailService  receiptEmailService;
 
     public Page<OrderResponse> getAll(Pageable pageable) {
         log.debug("Fetching orders — page: {}", pageable.getPageNumber());
-        return orderRepository.findAll(pageable).map(OrderResponse::from);
+        return orderRepository.findAll(pageable).map(order -> {
+            Refund refund = refundRepository.findByOrderId(order.getId()).orElse(null);
+            return OrderResponse.from(order, refund);
+        });
     }
 
     public OrderResponse getById(Long id) {
         log.debug("Fetching order id: {}", id);
-        return OrderResponse.from(findById(id));
+        Order order = findById(id);
+        Refund refund = refundRepository.findByOrderId(id).orElse(null);
+        return OrderResponse.from(order, refund);
     }
 
     @Transactional
@@ -77,15 +88,27 @@ public class OrderService {
             }
             int rate = rewardConfig.getRedemptionRate();
             if (rate <= 0) rate = 100;
-            BigDecimal redemptionDollars = BigDecimal.valueOf(pointsToRedeem).divide(BigDecimal.valueOf(rate), 2, RoundingMode.DOWN);
+            BigDecimal redemptionDollars = BigDecimal.valueOf(pointsToRedeem)
+                    .divide(BigDecimal.valueOf(rate), 2, RoundingMode.DOWN);
             discount = discount.add(redemptionDollars);
             customer.setRewardPoints(balance - pointsToRedeem);
             customerRepository.save(customer);
         }
 
-        List<OrderItem> items           = new ArrayList<>();
+        // Pre-load tax rules for per-product resolution
+        Map<String, BigDecimal> taxRuleMap = taxRuleRepository.findAllByOrderByTaxCategoryAsc()
+                .stream().collect(Collectors.toMap(TaxRule::getTaxCategory, TaxRule::getRate));
+
+        // Load company for global tax settings
+        Company company = companyRepository.findFirstByOrderByIdAsc().orElse(null);
+        boolean taxEnabled = company == null || !Boolean.FALSE.equals(company.getTaxEnabled());
+        BigDecimal globalTaxRate = (company != null && company.getTaxRate() != null)
+                ? company.getTaxRate() : DEFAULT_TAX_RATE;
+
+        List<OrderItem> items             = new ArrayList<>();
         List<Inventory> inventoriesToSave = new ArrayList<>();
-        BigDecimal      subtotal       = BigDecimal.ZERO;
+        BigDecimal subtotal               = BigDecimal.ZERO;
+        BigDecimal totalTax               = BigDecimal.ZERO;
 
         for (OrderItemRequest itemReq : request.getItems()) {
             Product product = productRepository.findById(itemReq.getProductId())
@@ -114,13 +137,28 @@ public class OrderService {
             subtotal = subtotal.add(itemSubtotal);
             inventory.setQuantity(inventory.getQuantity().subtract(itemReq.getQuantity()));
             inventoriesToSave.add(inventory);
+
+            // Per-item tax contribution (used for per-product tax in totalTax)
+            if (taxEnabled) {
+                BigDecimal itemRate = resolveItemTaxRate(product, taxRuleMap, globalTaxRate);
+                totalTax = totalTax.add(itemSubtotal.multiply(itemRate));
+            }
         }
 
         inventoryRepository.saveAll(inventoriesToSave);
 
         BigDecimal afterDiscount = subtotal.subtract(discount).max(BigDecimal.ZERO);
-        BigDecimal tax          = afterDiscount.multiply(TAX_RATE).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal total        = afterDiscount.add(tax).setScale(2, RoundingMode.HALF_UP);
+
+        // Adjust tax proportionally when discount reduces the taxable base
+        BigDecimal tax;
+        if (taxEnabled && subtotal.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal discountRatio = afterDiscount.divide(subtotal, 10, RoundingMode.HALF_UP);
+            tax = totalTax.multiply(discountRatio).setScale(2, RoundingMode.HALF_UP);
+        } else {
+            tax = BigDecimal.ZERO;
+        }
+
+        BigDecimal total = afterDiscount.add(tax).setScale(2, RoundingMode.HALF_UP);
 
         Order order = orderRepository.save(Order.builder()
                 .customer(customer).cashier(cashier)
@@ -145,13 +183,14 @@ public class OrderService {
                     int current = customer.getRewardPoints() != null ? customer.getRewardPoints() : 0;
                     customer.setRewardPoints(current + earned);
                     customerRepository.save(customer);
-                    log.info("Order id: {} — customer {} earned {} reward points", order.getId(), customer.getId(), earned);
+                    log.info("Order id: {} — customer {} earned {} reward points",
+                            order.getId(), customer.getId(), earned);
                 }
             }
         }
 
-        log.info("Order created — id: {}, total: {}", order.getId(), total);
-        return OrderResponse.from(order);
+        log.info("Order created — id: {}, subtotal: {}, tax: {}, total: {}", order.getId(), subtotal, tax, total);
+        return OrderResponse.from(order, null);
     }
 
     @Transactional
@@ -168,12 +207,7 @@ public class OrderService {
             throw new BadRequestException(ErrorCode.OR004);
         }
 
-        for (OrderItem item : order.getItems()) {
-            inventoryRepository.findByProductId(item.getProduct().getId()).ifPresent(inv -> {
-                inv.setQuantity(inv.getQuantity().add(item.getQuantity()));
-                inventoryRepository.save(inv);
-            });
-        }
+        restoreInventory(order);
 
         order.setStatus(OrderStatus.CANCELLED);
         paymentRepository.findByOrderId(id).ifPresent(p -> {
@@ -182,17 +216,74 @@ public class OrderService {
         });
 
         log.info("Order id: {} cancelled", id);
-        return OrderResponse.from(orderRepository.save(order));
+        return OrderResponse.from(orderRepository.save(order), null);
+    }
+
+    @Transactional
+    public OrderResponse refund(Long id, RefundRequest request) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        log.info("Refunding order id: {} by '{}'", id, username);
+
+        Order order = findById(id);
+
+        if (order.getStatus() == OrderStatus.REFUNDED) {
+            log.warn("[OR006] Refund rejected — order id: {} already refunded", id);
+            throw new BadRequestException(ErrorCode.OR006);
+        }
+        if (order.getStatus() != OrderStatus.COMPLETED) {
+            log.warn("[OR007] Refund rejected — order id: {} has status {}", id, order.getStatus());
+            throw new BadRequestException(ErrorCode.OR007);
+        }
+
+        restoreInventory(order);
+
+        // Deduct reward points the customer earned on this order
+        int pointsDeducted = 0;
+        if (order.getCustomer() != null) {
+            int pointsPerDollar = rewardConfig.getPointsPerDollar();
+            if (pointsPerDollar > 0) {
+                Customer customer = order.getCustomer();
+                int earned = order.getSubtotal().multiply(BigDecimal.valueOf(pointsPerDollar)).intValue();
+                if (earned > 0) {
+                    int current = customer.getRewardPoints() != null ? customer.getRewardPoints() : 0;
+                    int newBalance = Math.max(0, current - earned);
+                    pointsDeducted = current - newBalance;
+                    customer.setRewardPoints(newBalance);
+                    customerRepository.save(customer);
+                    log.info("Order id: {} refund — deducted {} reward points from customer {}",
+                            id, pointsDeducted, customer.getId());
+                }
+            }
+        }
+
+        order.setStatus(OrderStatus.REFUNDED);
+        paymentRepository.findByOrderId(id).ifPresent(p -> {
+            p.setStatus(PaymentStatus.FAILED);
+            paymentRepository.save(p);
+        });
+        orderRepository.save(order);
+
+        Refund refund = refundRepository.save(Refund.builder()
+                .order(order)
+                .refundedBy(username)
+                .amount(order.getTotal())
+                .refundMethod(order.getPaymentMethod())
+                .reason(request != null ? request.getReason() : null)
+                .rewardPointsDeducted(pointsDeducted)
+                .build());
+
+        log.info("Order id: {} refunded by '{}', amount: {}", id, username, order.getTotal());
+        return OrderResponse.from(order, refund);
     }
 
     public com.pos.dto.response.OrderStats getStats() {
         log.debug("Fetching order stats");
         return new com.pos.dto.response.OrderStats(
                 orderRepository.count(),
-                orderRepository.countByStatus(com.pos.enums.OrderStatus.COMPLETED),
-                orderRepository.countByStatus(com.pos.enums.OrderStatus.PENDING),
-                orderRepository.countByStatus(com.pos.enums.OrderStatus.CANCELLED),
-                orderRepository.countByStatus(com.pos.enums.OrderStatus.REFUNDED),
+                orderRepository.countByStatus(OrderStatus.COMPLETED),
+                orderRepository.countByStatus(OrderStatus.PENDING),
+                orderRepository.countByStatus(OrderStatus.CANCELLED),
+                orderRepository.countByStatus(OrderStatus.REFUNDED),
                 orderRepository.sumCompletedRevenue()
         );
     }
@@ -211,6 +302,31 @@ public class OrderService {
         Company company = companyRepository.findFirstByOrderByIdAsc()
                 .orElseThrow(() -> new BadRequestException(ErrorCode.EM001));
         receiptEmailService.sendReceipt(company, email.trim(), order);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private void restoreInventory(Order order) {
+        for (OrderItem item : order.getItems()) {
+            inventoryRepository.findByProductId(item.getProduct().getId()).ifPresent(inv -> {
+                inv.setQuantity(inv.getQuantity().add(item.getQuantity()));
+                inventoryRepository.save(inv);
+            });
+        }
+    }
+
+    /**
+     * Resolves the effective tax rate for a product:
+     *   1. Product has a taxCategory → look up TaxRule → use rule rate
+     *   2. Fallback → global company rate (or default 10%)
+     */
+    private BigDecimal resolveItemTaxRate(Product product,
+                                          Map<String, BigDecimal> taxRuleMap,
+                                          BigDecimal globalRate) {
+        if (product.getTaxCategory() != null && taxRuleMap.containsKey(product.getTaxCategory())) {
+            return taxRuleMap.get(product.getTaxCategory());
+        }
+        return globalRate;
     }
 
     private Order findById(Long id) {

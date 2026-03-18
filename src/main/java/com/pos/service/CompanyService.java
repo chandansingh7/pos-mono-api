@@ -70,6 +70,8 @@ public class CompanyService {
         }
         applyEmailSendMethod(company, request);
         company.setTaxId(request.getTaxId());
+        if (request.getTaxRate() != null) company.setTaxRate(request.getTaxRate());
+        if (request.getTaxEnabled() != null) company.setTaxEnabled(request.getTaxEnabled());
         company.setWebsite(request.getWebsite());
         company.setReceiptFooterText(request.getReceiptFooterText());
         company.setReceiptHeaderText(request.getReceiptHeaderText());

@@ -30,6 +30,10 @@ public class CompanyRequest {
     private String emailSendMethod;
 
     private String taxId;
+    /** Tax rate as a decimal fraction (0.08 = 8%). Null → default 10%. */
+    private BigDecimal taxRate;
+    /** When false, no tax is applied to new orders. */
+    private Boolean taxEnabled;
     private String website;
     private String receiptFooterText;
     private String receiptHeaderText;

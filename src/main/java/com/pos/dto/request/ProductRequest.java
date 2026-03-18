@@ -34,6 +34,9 @@ public class ProductRequest {
     /** Unit for price/quantity: each, kg, g, lb, oz, L, ml, gal, fl_oz. Default each. */
     private String saleUnit;
 
+    /** Tax category key (e.g. STANDARD, REDUCED, EXEMPT). Null → global company rate. */
+    private String taxCategory;
+
     private boolean active = true;
     private int initialStock = 0;
     private int lowStockThreshold = 10;

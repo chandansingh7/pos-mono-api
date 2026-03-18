@@ -33,6 +33,10 @@ public class CompanyResponse {
     private LocalDateTime msConnectedAt;
 
     private String taxId;
+    /** Tax rate as a decimal fraction (e.g. 0.08 = 8%). Null → default 10%. */
+    private BigDecimal taxRate;
+    /** When false, tax is not applied to orders. Null treated as true. */
+    private Boolean taxEnabled;
     private String website;
     private String receiptFooterText;
     private String receiptPaperSize;
@@ -119,6 +123,8 @@ public class CompanyResponse {
                 .msAccountEmail(c.getMsAccountEmail())
                 .msConnectedAt(c.getMsConnectedAt())
                 .taxId(c.getTaxId())
+                .taxRate(c.getTaxRate())
+                .taxEnabled(c.getTaxEnabled())
                 .website(c.getWebsite())
                 .receiptFooterText(c.getReceiptFooterText())
                 .receiptPaperSize(c.getReceiptPaperSize())

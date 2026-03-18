@@ -24,6 +24,8 @@ public class ProductResponse {
     private BigDecimal quantity;
     private String saleUnitType;
     private String saleUnit;
+    /** Tax category key (e.g. STANDARD, REDUCED, EXEMPT). Null → global company rate. */
+    private String taxCategory;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String updatedBy;
@@ -44,6 +46,7 @@ public class ProductResponse {
                 .quantity(quantity)
                 .saleUnitType(p.getSaleUnitType())
                 .saleUnit(p.getSaleUnit())
+                .taxCategory(p.getTaxCategory())
                 .createdAt(p.getCreatedAt())
                 .updatedAt(p.getUpdatedAt())
                 .updatedBy(p.getUpdatedBy())

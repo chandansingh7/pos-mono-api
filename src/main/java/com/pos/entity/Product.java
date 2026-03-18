@@ -55,6 +55,13 @@ public class Product {
 
     private String imageUrl;
 
+    /**
+     * Tax category key linking to a TaxRule (e.g. STANDARD, REDUCED, EXEMPT).
+     * Null means use the global company tax rate.
+     */
+    @Column(name = "tax_category", length = 30)
+    private String taxCategory;
+
     @Builder.Default
     private boolean active = true;
 
