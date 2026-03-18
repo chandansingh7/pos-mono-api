@@ -78,21 +78,5 @@ jobs:
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
         package: release/app.jar
 
-    - name: Restart Azure Web App via Kudu API
-      env:
-        PUBLISH_PROFILE: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-        APP_NAME: ${{ secrets.AZURE_WEBAPP_NAME }}
-      run: |
-        SCRIPT='import os,xml.etree.ElementTree as ET,sys; p=os.environ.get("PUBLISH_PROFILE",""); r=ET.fromstring(p); [print(x.get("userName","")+":"+x.get("userPWD","")) or sys.exit(0) for x in r.findall("publishProfile") if x.get("publishMethod") in ("MSDeploy","FTP") and x.get("userName") and x.get("userPWD")]'
-        CREDS=$(python3 -c "$SCRIPT" 2>/dev/null | head -1)
-        if [[ -z "$CREDS" ]]; then
-          echo "Could not parse publish profile credentials — skipping restart"
-          exit 0
-        fi
-        HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
-          "https://${APP_NAME}.scm.azurewebsites.net/api/restart" \
-          -u "$CREDS" --max-time 30)
-        echo "Kudu restart HTTP status: $HTTP"
-        if [[ "$HTTP" != "200" && "$HTTP" != "204" ]]; then
-          echo "Warning: unexpected status $HTTP — app may need a manual restart in Azure Portal"
-        fi
+    - name: Confirm deployment complete
+      run: echo "Deployment finished. Azure App Service restarts automatically after JAR upload."
