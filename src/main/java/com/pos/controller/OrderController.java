@@ -22,13 +22,13 @@ public class OrderController {
     private final OrderService orderService;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'CASHIER')")
     public ResponseEntity<ApiResponse<Page<OrderResponse>>> getAll(Pageable pageable) {
         return ResponseEntity.ok(ApiResponse.ok(orderService.getAll(pageable)));
     }
 
     @GetMapping("/stats")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'CASHIER')")
     public ResponseEntity<ApiResponse<com.pos.dto.response.OrderStats>> getStats() {
         return ResponseEntity.ok(ApiResponse.ok(orderService.getStats()));
     }

@@ -36,7 +36,7 @@ public class InventoryController {
     }
 
     @GetMapping("/low-stock")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'CASHIER')")
     public ResponseEntity<ApiResponse<List<InventoryResponse>>> getLowStock() {
         return ResponseEntity.ok(ApiResponse.ok(inventoryService.getLowStock()));
     }
