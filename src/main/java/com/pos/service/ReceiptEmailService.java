@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -70,12 +71,25 @@ public class ReceiptEmailService {
         try {
             MimeMessage message = sender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(from);
+            // Use display name "Company Name <email>" to improve deliverability
+            String displayName = company.getName() != null && !company.getName().isBlank()
+                    ? company.getName() : from;
+            helper.setFrom(from, displayName);
             helper.setTo(toEmail);
+            helper.setReplyTo(from);
             helper.setSubject(subject);
-            helper.setText(htmlBody, true);
+            // Provide both plain-text and HTML parts — spam filters penalise HTML-only emails
+            String plainText = stripHtml(htmlBody);
+            helper.setText(plainText, htmlBody);
+            // Precedence: bulk tells mail clients this is transactional, not spam
+            message.addHeader("Precedence", "bulk");
+            message.addHeader("X-Mailer", "CicdPOS");
+            message.addHeader("X-Auto-Response-Suppress", "All");
             sender.send(message);
             log.info("Receipt email sent for order {} to {}", order.getId(), toEmail);
+        } catch (UnsupportedEncodingException e) {
+            log.warn("Encoding error building receipt email for order {}: {}", order.getId(), e.getMessage());
+            throw new BadRequestException(ErrorCode.EM002, e.getMessage());
         } catch (MailAuthenticationException e) {
             String authMsg = fullMessage(e);
             log.warn("SMTP authentication failed for order {} (host={} user={}): {}",
