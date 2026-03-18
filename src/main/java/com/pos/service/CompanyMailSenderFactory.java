@@ -42,15 +42,19 @@ public class CompanyMailSenderFactory {
         String host = resolveHost(company.getSmtpHost(), username);
 
         try {
+            int port = company.getSmtpPort() != null ? company.getSmtpPort() : 587;
+
+            // Gmail always requires STARTTLS on port 587 regardless of the saved toggle.
+            // Port 465 uses implicit SSL (SMTPS) for any provider.
+            boolean isGmail = host.toLowerCase().contains("smtp.gmail.com");
+            boolean useSSL = port == 465;
+            boolean startTls = useSSL ? false : (isGmail || Boolean.TRUE.equals(company.getSmtpStartTls()));
+
             JavaMailSenderImpl sender = new JavaMailSenderImpl();
             sender.setHost(host);
-            sender.setPort(company.getSmtpPort() != null ? company.getSmtpPort() : 587);
+            sender.setPort(port);
             sender.setUsername(username);
             sender.setPassword(password);
-
-            boolean startTls = Boolean.TRUE.equals(company.getSmtpStartTls());
-            // Port 465 uses implicit SSL (SMTPS), port 587/25 uses STARTTLS
-            boolean useSSL = company.getSmtpPort() != null && company.getSmtpPort() == 465;
 
             Properties props = new Properties();
             props.put("mail.smtp.auth", "true");
@@ -60,12 +64,12 @@ public class CompanyMailSenderFactory {
                 props.put("mail.smtp.ssl.enable", "true");
             }
             props.put("mail.smtp.ssl.trust", host);
-            props.put("mail.smtp.connectiontimeout", "10000");
-            props.put("mail.smtp.timeout", "10000");
-            props.put("mail.smtp.writetimeout", "10000");
+            props.put("mail.smtp.connectiontimeout", "15000");
+            props.put("mail.smtp.timeout", "15000");
+            props.put("mail.smtp.writetimeout", "15000");
             sender.setJavaMailProperties(props);
             log.debug("Created mail sender: host={} port={} startTls={} ssl={} username={}",
-                    host, sender.getPort(), startTls, useSSL, username);
+                    host, port, startTls, useSSL, username);
             return sender;
         } catch (Exception e) {
             log.warn("Failed to create mail sender from company config: {}", e.getMessage());
