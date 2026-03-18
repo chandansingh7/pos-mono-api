@@ -78,11 +78,18 @@ jobs:
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
         package: release/app.jar
 
-    - name: Restart Azure Web App to load new JAR cleanly
-      uses: azure/cli@v2
-      with:
-        azcliversion: latest
-        inlineScript: |
-          az webapp restart \
-            --name ${{ secrets.AZURE_WEBAPP_NAME }} \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}
+    - name: Restart Azure Web App via Kudu API
+      run: |
+        # Extract credentials from the publish profile XML
+        PROFILE='${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}'
+        USER=$(echo "$PROFILE" | grep -oP 'userName="\K[^"]+' | head -1)
+        PASS=$(echo "$PROFILE" | grep -oP 'userPWD="\K[^"]+' | head -1)
+        APP='${{ secrets.AZURE_WEBAPP_NAME }}'
+        # Call the Kudu restart API — no Azure CLI or resource group needed
+        HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+          "https://${APP}.scm.azurewebsites.net/api/restart" \
+          -u "${USER}:${PASS}")
+        echo "Kudu restart response: $HTTP"
+        if [ "$HTTP" != "200" ] && [ "$HTTP" != "204" ]; then
+          echo "Warning: restart returned $HTTP — app may need a manual restart in Azure Portal"
+        fi
