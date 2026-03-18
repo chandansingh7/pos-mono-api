@@ -16,8 +16,14 @@ public class OrderItemResponse {
     private BigDecimal quantity;
     private BigDecimal unitPrice;
     private BigDecimal subtotal;
+    /** Quantity already refunded (for partial refund display). */
+    private BigDecimal refundedQuantity;
 
     public static OrderItemResponse from(OrderItem item) {
+        return from(item, null);
+    }
+
+    public static OrderItemResponse from(OrderItem item, BigDecimal refundedQty) {
         return OrderItemResponse.builder()
                 .id(item.getId())
                 .productId(item.getProduct().getId())
@@ -26,6 +32,7 @@ public class OrderItemResponse {
                 .quantity(item.getQuantity())
                 .unitPrice(item.getUnitPrice())
                 .subtotal(item.getSubtotal())
+                .refundedQuantity(refundedQty != null ? refundedQty : BigDecimal.ZERO)
                 .build();
     }
 }

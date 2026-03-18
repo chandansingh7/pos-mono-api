@@ -7,6 +7,9 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Data
 @Builder
@@ -19,8 +22,12 @@ public class RefundResponse {
     private PaymentMethod refundMethod;
     private String reason;
     private Integer rewardPointsDeducted;
+    private List<RefundItemResponse> items;
 
     public static RefundResponse from(Refund r) {
+        List<RefundItemResponse> items = r.getItems() != null
+                ? r.getItems().stream().map(RefundItemResponse::from).collect(Collectors.toList())
+                : Collections.emptyList();
         return RefundResponse.builder()
                 .id(r.getId())
                 .orderId(r.getOrder().getId())
@@ -30,6 +37,7 @@ public class RefundResponse {
                 .refundMethod(r.getRefundMethod())
                 .reason(r.getReason())
                 .rewardPointsDeducted(r.getRewardPointsDeducted())
+                .items(items)
                 .build();
     }
 }

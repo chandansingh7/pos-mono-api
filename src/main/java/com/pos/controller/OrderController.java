@@ -28,7 +28,7 @@ public class OrderController {
     }
 
     @GetMapping("/stats")
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER', 'CASHIER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MANAGER')")
     public ResponseEntity<ApiResponse<com.pos.dto.response.OrderStats>> getStats() {
         return ResponseEntity.ok(ApiResponse.ok(orderService.getStats()));
     }

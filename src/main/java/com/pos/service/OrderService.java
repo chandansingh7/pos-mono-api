@@ -6,6 +6,7 @@ import com.pos.dto.request.OrderRequest;
 import com.pos.dto.request.RefundRequest;
 import com.pos.dto.response.OrderResponse;
 import com.pos.entity.*;
+import com.pos.entity.RefundItem;
 import com.pos.enums.OrderStatus;
 import com.pos.enums.PaymentStatus;
 import com.pos.exception.BadRequestException;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -44,23 +46,32 @@ public class OrderService {
     private final PaymentRepository    paymentRepository;
     private final CompanyRepository    companyRepository;
     private final RefundRepository     refundRepository;
+    private final RefundItemRepository refundItemRepository;
     private final TaxRuleRepository    taxRuleRepository;
     private final RewardConfig         rewardConfig;
     private final ReceiptEmailService  receiptEmailService;
 
     public Page<OrderResponse> getAll(Pageable pageable) {
         log.debug("Fetching orders — page: {}", pageable.getPageNumber());
-        return orderRepository.findAll(pageable).map(order -> {
-            Refund refund = refundRepository.findByOrderId(order.getId()).orElse(null);
-            return OrderResponse.from(order, refund);
-        });
+        return orderRepository.findAll(pageable).map(this::buildOrderResponse);
     }
 
     public OrderResponse getById(Long id) {
         log.debug("Fetching order id: {}", id);
         Order order = findById(id);
-        Refund refund = refundRepository.findByOrderId(id).orElse(null);
-        return OrderResponse.from(order, refund);
+        return buildOrderResponse(order);
+    }
+
+    private OrderResponse buildOrderResponse(Order order) {
+        Long orderId = order.getId();
+        List<Refund> refunds = refundRepository.findAllByOrderIdOrderByRefundedAtDesc(orderId);
+        BigDecimal refundedAmount = refundRepository.sumAmountByOrderId(orderId);
+        Map<Long, BigDecimal> refundedQtyByItemId = new HashMap<>();
+        for (RefundItem ri : refundItemRepository.findAllByRefundOrderId(orderId)) {
+            Long itemId = ri.getOrderItem().getId();
+            refundedQtyByItemId.merge(itemId, ri.getQuantity(), BigDecimal::add);
+        }
+        return OrderResponse.from(order, refunds, refundedAmount, refundedQtyByItemId);
     }
 
     @Transactional
@@ -190,7 +201,7 @@ public class OrderService {
         }
 
         log.info("Order created — id: {}, subtotal: {}, tax: {}, total: {}", order.getId(), subtotal, tax, total);
-        return OrderResponse.from(order, null);
+        return buildOrderResponse(order);
     }
 
     @Transactional
@@ -202,8 +213,8 @@ public class OrderService {
             log.warn("[OR003] Cancel rejected — order id: {} already cancelled", id);
             throw new BadRequestException(ErrorCode.OR003);
         }
-        if (order.getStatus() == OrderStatus.REFUNDED) {
-            log.warn("[OR004] Cancel rejected — order id: {} is refunded", id);
+        if (order.getStatus() == OrderStatus.REFUNDED || order.getStatus() == OrderStatus.PARTIALLY_REFUNDED) {
+            log.warn("[OR004] Cancel rejected — order id: {} is refunded or partially refunded", id);
             throw new BadRequestException(ErrorCode.OR004);
         }
 
@@ -216,13 +227,14 @@ public class OrderService {
         });
 
         log.info("Order id: {} cancelled", id);
-        return OrderResponse.from(orderRepository.save(order), null);
+        return buildOrderResponse(orderRepository.save(order));
     }
 
     @Transactional
     public OrderResponse refund(Long id, RefundRequest request) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        log.info("Refunding order id: {} by '{}'", id, username);
+        log.info("Refunding order id: {} by '{}' (partial={})", id, username,
+                request != null && request.getItems() != null && !request.getItems().isEmpty());
 
         Order order = findById(id);
 
@@ -230,28 +242,119 @@ public class OrderService {
             log.warn("[OR006] Refund rejected — order id: {} already refunded", id);
             throw new BadRequestException(ErrorCode.OR006);
         }
-        if (order.getStatus() != OrderStatus.COMPLETED) {
+        if (order.getStatus() != OrderStatus.COMPLETED && order.getStatus() != OrderStatus.PARTIALLY_REFUNDED) {
             log.warn("[OR007] Refund rejected — order id: {} has status {}", id, order.getStatus());
             throw new BadRequestException(ErrorCode.OR007);
         }
 
-        restoreInventory(order);
+        boolean isPartial = request != null && request.getItems() != null && !request.getItems().isEmpty();
+        BigDecimal refundAmount;
+        List<RefundItem> refundItems = new ArrayList<>();
 
-        // Deduct reward points the customer earned on this order
+        if (isPartial) {
+            // Partial refund: validate and build refund items
+            BigDecimal existingRefunded = refundRepository.sumAmountByOrderId(id);
+            Map<Long, BigDecimal> alreadyRefundedQty = new HashMap<>();
+            for (RefundItem ri : refundItemRepository.findAllByRefundOrderId(id)) {
+                Long itemId = ri.getOrderItem().getId();
+                alreadyRefundedQty.merge(itemId, ri.getQuantity(), BigDecimal::add);
+            }
+
+            BigDecimal partialSubtotal = BigDecimal.ZERO;
+            for (com.pos.dto.request.RefundItemRequest itemReq : request.getItems()) {
+                OrderItem oi = order.getItems().stream()
+                        .filter(i -> i.getId().equals(itemReq.getOrderItemId()))
+                        .findFirst()
+                        .orElse(null);
+                if (oi == null) {
+                    log.warn("[OR008] Refund item {} not in order {}", itemReq.getOrderItemId(), id);
+                    throw new BadRequestException(ErrorCode.OR008);
+                }
+                BigDecimal maxQty = oi.getQuantity().subtract(alreadyRefundedQty.getOrDefault(oi.getId(), BigDecimal.ZERO));
+                if (itemReq.getQuantity().compareTo(maxQty) > 0) {
+                    log.warn("[OR008] Refund qty {} exceeds available {} for item {}", itemReq.getQuantity(), maxQty, oi.getId());
+                    throw new BadRequestException(ErrorCode.OR008);
+                }
+                BigDecimal itemAmount = oi.getUnitPrice().multiply(itemReq.getQuantity()).setScale(2, RoundingMode.HALF_UP);
+                partialSubtotal = partialSubtotal.add(itemAmount);
+                refundItems.add(RefundItem.builder()
+                        .orderItem(oi)
+                        .quantity(itemReq.getQuantity())
+                        .amount(itemAmount)
+                        .build());
+            }
+            // Proportional tax for partial amount
+            BigDecimal subtotalRatio = order.getSubtotal().compareTo(BigDecimal.ZERO) > 0
+                    ? partialSubtotal.divide(order.getSubtotal(), 10, RoundingMode.HALF_UP) : BigDecimal.ONE;
+            BigDecimal partialTax = order.getTax().multiply(subtotalRatio).setScale(2, RoundingMode.HALF_UP);
+            refundAmount = partialSubtotal.add(partialTax).setScale(2, RoundingMode.HALF_UP);
+
+            // Restore inventory only for refunded items
+            for (RefundItem ri : refundItems) {
+                inventoryRepository.findByProductId(ri.getOrderItem().getProduct().getId()).ifPresent(inv -> {
+                    inv.setQuantity(inv.getQuantity().add(ri.getQuantity()));
+                    inventoryRepository.save(inv);
+                });
+            }
+
+            // Deduct proportional reward points
+            int pointsDeducted = 0;
+            if (order.getCustomer() != null && order.getSubtotal().compareTo(BigDecimal.ZERO) > 0) {
+                int pointsPerDollar = rewardConfig.getPointsPerDollar();
+                if (pointsPerDollar > 0) {
+                    int earnedOnPartial = partialSubtotal.multiply(BigDecimal.valueOf(pointsPerDollar)).intValue();
+                    if (earnedOnPartial > 0) {
+                        Customer customer = order.getCustomer();
+                        int current = customer.getRewardPoints() != null ? customer.getRewardPoints() : 0;
+                        int newBalance = Math.max(0, current - earnedOnPartial);
+                        pointsDeducted = current - newBalance;
+                        customer.setRewardPoints(newBalance);
+                        customerRepository.save(customer);
+                    }
+                }
+            }
+
+            Refund refund = refundRepository.save(Refund.builder()
+                    .order(order)
+                    .refundedBy(username)
+                    .amount(refundAmount)
+                    .refundMethod(order.getPaymentMethod())
+                    .reason(request.getReason())
+                    .rewardPointsDeducted(pointsDeducted)
+                    .build());
+            for (RefundItem ri : refundItems) {
+                ri.setRefund(refund);
+                refundItemRepository.save(ri);
+            }
+            refund.setItems(refundItems);
+
+            BigDecimal newTotalRefunded = existingRefunded.add(refundAmount);
+            order.setStatus(newTotalRefunded.compareTo(order.getTotal()) >= 0 ? OrderStatus.REFUNDED : OrderStatus.PARTIALLY_REFUNDED);
+            if (order.getStatus() == OrderStatus.REFUNDED) {
+                paymentRepository.findByOrderId(id).ifPresent(p -> {
+                    p.setStatus(PaymentStatus.FAILED);
+                    paymentRepository.save(p);
+                });
+            }
+            orderRepository.save(order);
+            log.info("Order id: {} partial refund by '{}', amount: {}", id, username, refundAmount);
+            return buildOrderResponse(order);
+        }
+
+        // Full refund
+        restoreInventory(order);
         int pointsDeducted = 0;
         if (order.getCustomer() != null) {
             int pointsPerDollar = rewardConfig.getPointsPerDollar();
             if (pointsPerDollar > 0) {
-                Customer customer = order.getCustomer();
                 int earned = order.getSubtotal().multiply(BigDecimal.valueOf(pointsPerDollar)).intValue();
                 if (earned > 0) {
+                    Customer customer = order.getCustomer();
                     int current = customer.getRewardPoints() != null ? customer.getRewardPoints() : 0;
                     int newBalance = Math.max(0, current - earned);
                     pointsDeducted = current - newBalance;
                     customer.setRewardPoints(newBalance);
                     customerRepository.save(customer);
-                    log.info("Order id: {} refund — deducted {} reward points from customer {}",
-                            id, pointsDeducted, customer.getId());
                 }
             }
         }
@@ -272,8 +375,8 @@ public class OrderService {
                 .rewardPointsDeducted(pointsDeducted)
                 .build());
 
-        log.info("Order id: {} refunded by '{}', amount: {}", id, username, order.getTotal());
-        return OrderResponse.from(order, refund);
+        log.info("Order id: {} full refund by '{}', amount: {}", id, username, order.getTotal());
+        return buildOrderResponse(order);
     }
 
     public com.pos.dto.response.OrderStats getStats() {

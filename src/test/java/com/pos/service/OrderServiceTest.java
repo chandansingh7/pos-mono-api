@@ -51,6 +51,7 @@ class OrderServiceTest {
     @Mock private PaymentRepository paymentRepository;
     @Mock private CompanyRepository companyRepository;
     @Mock private RefundRepository refundRepository;
+    @Mock private RefundItemRepository refundItemRepository;
     @Mock private TaxRuleRepository taxRuleRepository;
     @Mock private RewardConfig rewardConfig;
     @Mock private ReceiptEmailService receiptEmailService;
@@ -68,7 +69,9 @@ class OrderServiceTest {
         lenient().when(rewardConfig.getPointsPerDollar()).thenReturn(1);
         lenient().when(rewardConfig.getRedemptionRate()).thenReturn(100);
         lenient().when(taxRuleRepository.findAllByOrderByTaxCategoryAsc()).thenReturn(List.of());
-        lenient().when(refundRepository.findByOrderId(any())).thenReturn(Optional.empty());
+        lenient().when(refundRepository.findAllByOrderIdOrderByRefundedAtDesc(any())).thenReturn(List.of());
+        lenient().when(refundRepository.sumAmountByOrderId(any())).thenReturn(java.math.BigDecimal.ZERO);
+        lenient().when(refundItemRepository.findAllByRefundOrderId(any())).thenReturn(List.of());
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken("cashier1", null, List.of()));
         cashier = new User();

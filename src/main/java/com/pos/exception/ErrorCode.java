@@ -60,6 +60,7 @@ public enum ErrorCode {
     OR005("OR005", "Customer has no email address; cannot send receipt"),
     OR006("OR006", "Order is already refunded"),
     OR007("OR007", "Only completed orders can be refunded"),
+    OR008("OR008", "Invalid partial refund: order item not found or quantity exceeds original"),
 
     // ── Email (receipt) ───────────────────────────────────────────────────────
     EM001("EM001", "Company email is not set in Settings; cannot send receipt"),
