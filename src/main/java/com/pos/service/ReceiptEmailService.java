@@ -77,11 +77,10 @@ public class ReceiptEmailService {
             sender.send(message);
             log.info("Receipt email sent for order {} to {}", order.getId(), toEmail);
         } catch (MailAuthenticationException e) {
-            String authMsg = e.getMessage() != null ? e.getMessage() : "";
+            String authMsg = fullMessage(e);
             log.warn("SMTP authentication failed for order {} (host={} user={}): {}",
                     order.getId(), company.getSmtpHost(), company.getSmtpUsername(), authMsg);
-            // Microsoft 535 5.7.139 = basic auth permanently disabled for personal Outlook accounts
-            if (authMsg.contains("5.7.139") || authMsg.contains("basic authentication is disabled")) {
+            if (isMicrosoftBasicAuthDisabled(authMsg, company.getSmtpUsername())) {
                 throw new BadRequestException(ErrorCode.EM007);
             }
             throw new BadRequestException(ErrorCode.EM006);
@@ -119,6 +118,28 @@ public class ReceiptEmailService {
             // Include the Graph error detail in the response so admins can act on it
             throw new BadRequestException(ErrorCode.EM004, detail);
         }
+    }
+
+    /** Walks the full cause chain and concatenates all messages. */
+    private static String fullMessage(Throwable t) {
+        StringBuilder sb = new StringBuilder();
+        while (t != null) {
+            if (t.getMessage() != null) sb.append(t.getMessage()).append(" ");
+            t = t.getCause();
+        }
+        return sb.toString().trim();
+    }
+
+    /**
+     * Returns true when Microsoft has rejected the connection due to basic auth being
+     * permanently disabled (error 535 5.7.139), OR when the username is a personal
+     * Outlook/Hotmail/Live address (these accounts can never use basic SMTP auth).
+     */
+    private static boolean isMicrosoftBasicAuthDisabled(String fullMsg, String username) {
+        if (fullMsg.contains("5.7.139") || fullMsg.contains("basic authentication is disabled")) {
+            return true;
+        }
+        return username != null && username.toLowerCase().matches(".*@(outlook|hotmail|live)\\..+");
     }
 
     private static String stripHtml(String html) {

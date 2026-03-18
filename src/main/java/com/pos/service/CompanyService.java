@@ -214,11 +214,10 @@ public class CompanyService {
             log.info("Email verified for company by {}", updatedBy);
             return CompanyResponse.from(company);
         } catch (MailAuthenticationException e) {
-            String authMsg = e.getMessage() != null ? e.getMessage() : "";
+            String authMsg = fullCauseMessage(e);
             log.warn("Email verification failed (auth): host={} port={} username={} error={}",
                     company.getSmtpHost(), company.getSmtpPort(), company.getSmtpUsername(), authMsg);
-            // Microsoft 535 5.7.139 = basic auth permanently disabled for personal Outlook accounts
-            if (authMsg.contains("5.7.139") || authMsg.contains("basic authentication is disabled")) {
+            if (isMicrosoftBasicAuthDisabled(authMsg, company.getSmtpUsername())) {
                 throw new BadRequestException(ErrorCode.EM007);
             }
             throw new BadRequestException(ErrorCode.EM006);
@@ -353,5 +352,27 @@ public class CompanyService {
         company = companyRepository.save(company);
         log.info("Company favicon updated by {}", updatedBy);
         return CompanyResponse.from(company);
+    }
+
+    /** Walks the full cause chain and concatenates all messages for reliable error detection. */
+    private static String fullCauseMessage(Throwable t) {
+        StringBuilder sb = new StringBuilder();
+        while (t != null) {
+            if (t.getMessage() != null) sb.append(t.getMessage()).append(" ");
+            t = t.getCause();
+        }
+        return sb.toString().trim();
+    }
+
+    /**
+     * Returns true when Microsoft has disabled basic SMTP auth (535 5.7.139),
+     * OR the username is a personal Outlook/Hotmail/Live address which can never
+     * use basic SMTP auth regardless of password.
+     */
+    private static boolean isMicrosoftBasicAuthDisabled(String fullMsg, String username) {
+        if (fullMsg.contains("5.7.139") || fullMsg.contains("basic authentication is disabled")) {
+            return true;
+        }
+        return username != null && username.toLowerCase().matches(".*@(outlook|hotmail|live)\\..+");
     }
 }
