@@ -66,6 +66,7 @@ public enum ErrorCode {
     EM004("EM004", "Failed to send email via Microsoft; check Microsoft account permissions or try again later"),
     EM005("EM005", "Microsoft sign-in account cannot send mail via Graph API (personal Outlook accounts are not supported). Use SMTP instead — go to Settings → Email → choose Outlook / Hotmail (personal) and enter your password."),
     EM006("EM006", "SMTP authentication failed — wrong email or password. Go to Settings → Email and re-enter your password. If 2FA is ON, use an App Password from account.microsoft.com/security."),
+    EM007("EM007", "Microsoft has disabled basic authentication for personal Outlook/Hotmail accounts (error 535 5.7.139). SMTP with a password is no longer supported for @outlook.com/@hotmail.com. Use Gmail SMTP instead: create a Gmail account, enable 2FA, generate an App Password at myaccount.google.com/apppasswords, then select Gmail as your provider in Settings → Email."),
 
     // ── Inventory ─────────────────────────────────────────────────────────────
     IN001("IN001", "Inventory record not found for this product"),

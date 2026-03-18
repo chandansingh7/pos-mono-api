@@ -77,8 +77,13 @@ public class ReceiptEmailService {
             sender.send(message);
             log.info("Receipt email sent for order {} to {}", order.getId(), toEmail);
         } catch (MailAuthenticationException e) {
+            String authMsg = e.getMessage() != null ? e.getMessage() : "";
             log.warn("SMTP authentication failed for order {} (host={} user={}): {}",
-                    order.getId(), company.getSmtpHost(), company.getSmtpUsername(), e.getMessage());
+                    order.getId(), company.getSmtpHost(), company.getSmtpUsername(), authMsg);
+            // Microsoft 535 5.7.139 = basic auth permanently disabled for personal Outlook accounts
+            if (authMsg.contains("5.7.139") || authMsg.contains("basic authentication is disabled")) {
+                throw new BadRequestException(ErrorCode.EM007);
+            }
             throw new BadRequestException(ErrorCode.EM006);
         } catch (MailException e) {
             log.error("Failed to send receipt email for order {}: {}", order.getId(), e.getMessage());

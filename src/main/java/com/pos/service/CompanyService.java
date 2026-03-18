@@ -214,8 +214,13 @@ public class CompanyService {
             log.info("Email verified for company by {}", updatedBy);
             return CompanyResponse.from(company);
         } catch (MailAuthenticationException e) {
+            String authMsg = e.getMessage() != null ? e.getMessage() : "";
             log.warn("Email verification failed (auth): host={} port={} username={} error={}",
-                    company.getSmtpHost(), company.getSmtpPort(), company.getSmtpUsername(), e.getMessage());
+                    company.getSmtpHost(), company.getSmtpPort(), company.getSmtpUsername(), authMsg);
+            // Microsoft 535 5.7.139 = basic auth permanently disabled for personal Outlook accounts
+            if (authMsg.contains("5.7.139") || authMsg.contains("basic authentication is disabled")) {
+                throw new BadRequestException(ErrorCode.EM007);
+            }
             throw new BadRequestException(ErrorCode.EM006);
         } catch (MailException e) {
             log.warn("Email verification failed (mail): host={} port={} username={} error={}",
