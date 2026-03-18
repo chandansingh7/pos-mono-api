@@ -83,26 +83,10 @@ jobs:
         PUBLISH_PROFILE: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
         APP_NAME: ${{ secrets.AZURE_WEBAPP_NAME }}
       run: |
-        # Parse publish profile with Python (reliable XML parsing, no regex issues)
-        CREDS=$(python3 - <<'EOF'
-import os, xml.etree.ElementTree as ET
-profile = os.environ.get("PUBLISH_PROFILE", "")
-try:
-    root = ET.fromstring(profile)
-    for pub in root.findall("publishProfile"):
-        method = pub.get("publishMethod", "")
-        if method == "MSDeploy" or method == "FTP":
-            user = pub.get("userName", "")
-            pwd  = pub.get("userPWD", "")
-            if user and pwd:
-                print(f"{user}:{pwd}")
-                break
-except Exception as e:
-    print(f"PARSE_ERROR:{e}", end="")
-EOF
-        )
-        if [[ "$CREDS" == PARSE_ERROR* ]] || [[ -z "$CREDS" ]]; then
-          echo "Could not parse publish profile credentials — skipping restart (app will restart automatically after deploy)"
+        SCRIPT='import os,xml.etree.ElementTree as ET,sys; p=os.environ.get("PUBLISH_PROFILE",""); r=ET.fromstring(p); [print(x.get("userName","")+":"+x.get("userPWD","")) or sys.exit(0) for x in r.findall("publishProfile") if x.get("publishMethod") in ("MSDeploy","FTP") and x.get("userName") and x.get("userPWD")]'
+        CREDS=$(python3 -c "$SCRIPT" 2>/dev/null | head -1)
+        if [[ -z "$CREDS" ]]; then
+          echo "Could not parse publish profile credentials — skipping restart"
           exit 0
         fi
         HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
